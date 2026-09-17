@@ -1,7 +1,10 @@
 #pragma once
 
 #include <QRect>
+#include <QSizeF>
 #include <QString>
+
+#include <cmath>
 
 namespace ifz {
 
@@ -14,6 +17,22 @@ struct Monitor {
     QString name;                 // human-readable, e.g. "Built-in Retina Display"
     QRect geometry;               // in Qt's top-left coordinate system, points
     QRect availableGeometry;      // minus menu bar + Dock
+    bool isMain = false;          // hosts the menu bar
+    QSizeF physicalSizeMm;        // CGDisplayScreenSize; empty when unknown
+
+    // Panel diagonal in inches, rounded. 0 when the display reports no
+    // physical size (happens for some virtual and mirrored displays).
+    int diagonalInches() const {
+        if (physicalSizeMm.isEmpty()) return 0;
+        const double mm = std::hypot(physicalSizeMm.width(), physicalSizeMm.height());
+        return int(std::lround(mm / 25.4));
+    }
+
+    // 21:9 and wider. Used only to label the display in the UI.
+    bool isUltrawide() const {
+        if (geometry.height() <= 0) return false;
+        return double(geometry.width()) / double(geometry.height()) >= 2.1;
+    }
 
     // The main display sometimes reports unitNumber=0 even though it is
     // online and usable. We treat displayId as the truth: any CGDirectDisplayID

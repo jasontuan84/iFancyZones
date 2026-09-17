@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(iFancyZones
-    VERSION 1.3.9
+    VERSION 1.4.0
     DESCRIPTION "Zone-based window manager for macOS"
     LANGUAGES CXX OBJCXX
 )
@@ -37,6 +37,8 @@ set(IFZ_APP_SOURCES
 )
 
 set(IFZ_UI_SOURCES
+    ui/PopoverTheme.h ui/PopoverTheme.cpp
+    ui/PopoverWidgets.h ui/PopoverWidgets.cpp
     ui/TrayPopover.h ui/TrayPopover.cpp
     ui/ScreenLayoutTab.h ui/ScreenLayoutTab.cpp
     ui/LayoutsTab.h ui/LayoutsTab.cpp
@@ -110,6 +112,7 @@ target_link_libraries(iFancyZones PRIVATE
     "-framework ApplicationServices"
     "-framework Carbon"
     "-framework CoreGraphics"
+    "-framework QuartzCore"
     "-framework CoreFoundation"
     "-framework Foundation"
     "-framework ServiceManagement"

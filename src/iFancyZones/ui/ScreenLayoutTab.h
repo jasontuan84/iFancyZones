@@ -12,8 +12,11 @@ class QVBoxLayout;
 namespace ifz {
 
 class AccessibilityBridge;
+class Card;
 class SettingsStore;
 
+// "Displays" tab: the accessibility banner, then one card per physical
+// display binding it to a layout.
 class ScreenLayoutTab : public QWidget {
     Q_OBJECT
 public:
@@ -35,13 +38,14 @@ private:
         QPointer<QComboBox> combo;
     };
 
+    QWidget *buildAxBanner();
     void rebuildRows();
-    void onComboChanged(int index, quint32 unitNumber);
 
     SettingsStore *m_store;
     AccessibilityBridge *m_ax = nullptr;
     QVBoxLayout *m_rowsLayout = nullptr;
-    QLabel *m_axBanner = nullptr;
+    QWidget *m_axBanner = nullptr;
+    QLabel *m_axDetail = nullptr;
     QVector<Row> m_rows;
 };
 

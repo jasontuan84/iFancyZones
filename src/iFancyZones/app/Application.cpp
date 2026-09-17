@@ -80,8 +80,10 @@ void Application::showPopover()
                 this, &Application::deleteLayout);
         connect(m_popover.data(), &TrayPopover::newLayoutRequested,
                 this, &Application::openEditorForNewLayout);
+        connect(m_popover.data(), &TrayPopover::templateRequested,
+                this, &Application::openEditorForTemplate);
     }
-    m_popover->showAtTray(m_tray->iconGeometry());
+    m_popover->toggleAtTray(m_tray->iconGeometry());
 }
 
 void Application::showSettingsWindow()
@@ -121,6 +123,26 @@ void Application::openEditorForNewLayout()
     }
     Layout fresh(QUuid::createUuid(), QStringLiteral("New layout"), LayoutKind::Custom);
     fresh.setGap(m_settings->settings().defaultGap);
+    m_editor = new LayoutEditor(fresh, /*createNew=*/true);
+    connect(m_editor.data(), &LayoutEditor::saved, this, [this](const Layout &saved) {
+        m_settings->upsertLayout(saved);
+    });
+    m_editor->open();
+}
+
+void Application::openEditorForTemplate(const QString &name,
+                                        const QVector<QRectF> &zones)
+{
+    if (m_editor) {
+        m_editor->close();
+        m_editor->deleteLater();
+        m_editor = nullptr;
+    }
+    // Templates are starting points, so the layout is created unsaved and the
+    // user confirms it in the editor like any other new layout.
+    Layout fresh(QUuid::createUuid(), name, LayoutKind::Custom);
+    fresh.setGap(m_settings->settings().defaultGap);
+    for (const QRectF &r : zones) fresh.addZone(Zone(QUuid::createUuid(), r));
     m_editor = new LayoutEditor(fresh, /*createNew=*/true);
     connect(m_editor.data(), &LayoutEditor::saved, this, [this](const Layout &saved) {
         m_settings->upsertLayout(saved);

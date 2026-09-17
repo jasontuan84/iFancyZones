@@ -2,6 +2,8 @@
 
 #include <QApplication>
 #include <QPointer>
+#include <QRectF>
+#include <QVector>
 
 namespace ifz {
 
@@ -30,6 +32,8 @@ public slots:
     void showSettingsWindow();
     void openEditorForLayout(const class QUuid &layoutId);   // edit existing
     void openEditorForNewLayout();                            // new
+    // Start a new layout pre-filled from one of the Layouts-tab templates.
+    void openEditorForTemplate(const QString &name, const QVector<QRectF> &zones);
     void duplicateLayout(const class QUuid &layoutId);
     void deleteLayout(const class QUuid &layoutId);
 

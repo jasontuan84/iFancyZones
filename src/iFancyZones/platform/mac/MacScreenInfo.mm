@@ -96,6 +96,9 @@ QList<Monitor> MacScreenInfo::currentMonitors()
         m.name = QString::fromNSString(ns.localizedName);
         m.geometry          = CocoaFrameToQt(ns.frame,        primaryHeight);
         m.availableGeometry = CocoaFrameToQt(ns.visibleFrame, primaryHeight);
+        m.isMain = (did == CGMainDisplayID());
+        const CGSize mm = CGDisplayScreenSize(did);
+        m.physicalSizeMm = QSizeF(mm.width, mm.height);
         out.append(m);
     }
     NSLog(@"[iFancyZones] MacScreenInfo: produced %d Monitor entries", (int)out.size());
