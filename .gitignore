@@ -1,0 +1,123 @@
+# ---------------------------------------------------------------------------
+# Project working folders (keep the folders, ignore the contents)
+# ---------------------------------------------------------------------------
+/releases/*
+!/releases/.gitkeep
+/tmp/*
+!/tmp/.gitkeep
+/analysis/*
+!/analysis/.gitkeep
+
+# ---------------------------------------------------------------------------
+# Build directories (out-of-source builds)
+# ---------------------------------------------------------------------------
+build/
+build-*/
+cmake-build-*/
+out/
+_deps/
+
+# ---------------------------------------------------------------------------
+# CMake
+# ---------------------------------------------------------------------------
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+CMakeUserPresets.json
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+DartConfiguration.tcl
+*.cmake.stamp
+*.cmake.stamp.list
+
+# ---------------------------------------------------------------------------
+# Qt 6 generated sources and artifacts
+# ---------------------------------------------------------------------------
+# moc / uic / rcc output
+moc_*.cpp
+moc_*.h
+moc_predefs.h
+*.moc
+ui_*.h
+qrc_*.cpp
+*_autogen/
+*_qmltyperegistrations.cpp
+*_qmltypes.json
+.rcc/
+.uic/
+.moc/
+.obj/
+
+# qmake (legacy, in case it is ever used alongside CMake)
+Makefile*
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+.qmake.stash
+.qmake.cache
+object_script.*.Release
+object_script.*.Debug
+
+# QML
+*.qmlc
+*.jsc
+.qmlls.ini
+qmlcache_loader.cpp
+
+# Qt translations: keep .ts sources, ignore compiled catalogs
+*.qm
+
+# Qt Linguist / Designer backups
+*.autosave
+
+# ---------------------------------------------------------------------------
+# C/C++ build output
+# ---------------------------------------------------------------------------
+*.o
+*.obj
+*.lo
+*.slo
+*.a
+*.la
+*.lai
+*.so
+*.so.*
+*.dylib
+*.d
+*.gch
+*.pch
+*.dSYM/
+
+# ---------------------------------------------------------------------------
+# Packaging artifacts (macOS)
+# ---------------------------------------------------------------------------
+*.app/
+*.dmg
+*.pkg
+*.zip
+*.tar.gz
+
+# ---------------------------------------------------------------------------
+# IDE / editor
+# ---------------------------------------------------------------------------
+.qtcreator/
+.vscode/
+.idea/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+*.swp
+*~
+
+# ---------------------------------------------------------------------------
+# macOS
+# ---------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
