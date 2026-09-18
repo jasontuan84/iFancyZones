@@ -33,6 +33,7 @@ Inspired by Microsoft PowerToys FancyZones, rebuilt natively for macOS with Qt 6
 - [Build from source](#build-from-source)
 - [Third-party libraries](#third-party-libraries)
 - [Roadmap](#roadmap)
+- [Changelog](#changelog)
 - [License](#license)
 - [Version & author](#version--author)
 
@@ -308,6 +309,12 @@ Qt is dynamically linked and redistributed inside the app bundle under the terms
 - [ ] Spaces awareness, pending a public Apple API
 - [ ] Layout import and export as a portable `.ifzlayout` file
 - [ ] Auto-update through Sparkle
+
+---
+
+## Changelog
+
+Every shipped version and what changed is recorded in [CHANGELOG.md](CHANGELOG.md), following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and Semantic Versioning.
 
 ---
 
