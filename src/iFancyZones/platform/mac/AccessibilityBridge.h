@@ -45,6 +45,13 @@ public:
     // or nullptr if none. Caller must call releaseWindowHandle() exactly once.
     WindowHandle captureFocusedWindow();
 
+    // Returns a retained handle to the topmost window under `screenPoint`,
+    // skipping our own windows, or nullptr if none. At mouse-up this is the
+    // window the user dragged, even when it did not exist at mouse-down (a
+    // torn-off browser tab) or never got AX focus. Caller must call
+    // releaseWindowHandle() exactly once.
+    WindowHandle captureWindowAtPoint(const QPoint &screenPoint);
+
     // Move + resize a previously captured window. Returns true on success.
     bool moveCapturedWindow(WindowHandle h, const QRect &targetGlobal);
 

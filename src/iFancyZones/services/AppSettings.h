@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QColor>
 #include <QJsonObject>
 #include <QStringList>
 
@@ -31,6 +32,12 @@ struct AppSettings {
     int defaultGap = 0;
     bool showZoneNumbers = true;
     bool restoreSizeOnUnsnap = true;
+
+    // Color of the zones in the snap preview and the layout editor, and of
+    // the screen-number badges. Stored as "#RRGGBB"; each surface applies
+    // its own alpha.
+    static QColor defaultZoneColor() { return QColor(60, 200, 120); }
+    QColor zoneColor = defaultZoneColor();
     QStringList excludedBundles;
 
     QJsonObject toJson() const;

@@ -4,7 +4,7 @@
 
 namespace ifz {
 
-// Small green-filled circle with a white number inside. Used as the
+// Small zone-colored circle with a white number inside. Used as the
 // monitor-index badge at the start of each row in the Screen & Layout tab.
 class ScreenNumberBadge : public QWidget {
     Q_OBJECT

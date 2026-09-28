@@ -20,6 +20,7 @@ QJsonObject AppSettings::toJson() const
     o["default-gap"] = defaultGap;
     o["show-zone-numbers"] = showZoneNumbers;
     o["restore-size-on-unsnap"] = restoreSizeOnUnsnap;
+    o["zone-color"] = zoneColor.name(QColor::HexRgb);
     QJsonArray bundles;
     for (const QString &b : excludedBundles) bundles.append(b);
     o["excluded-bundles"] = bundles;
@@ -42,6 +43,8 @@ AppSettings AppSettings::fromJson(const QJsonObject &obj)
     s.defaultGap = obj.value("default-gap").toInt(0);
     s.showZoneNumbers = obj.value("show-zone-numbers").toBool(true);
     s.restoreSizeOnUnsnap = obj.value("restore-size-on-unsnap").toBool(true);
+    const QColor zc = QColor::fromString(obj.value("zone-color").toString());
+    s.zoneColor = zc.isValid() ? zc : defaultZoneColor();
     const QJsonArray arr = obj.value("excluded-bundles").toArray();
     for (const QJsonValue &v : arr) s.excludedBundles.append(v.toString());
     return s;

@@ -2,10 +2,12 @@
 
 #include "ChordEdit.h"
 #include "HotkeyEdit.h"
+#include "services/AppSettings.h"
 #include "services/SettingsStore.h"
 
 #include <QApplication>
 #include <QCheckBox>
+#include <QColorDialog>
 #include <QFormLayout>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -54,6 +56,28 @@ SettingsWindow::SettingsWindow(SettingsStore *store, QWidget *parent)
     m_restoreSize = new QCheckBox(tr("Restore original size when unsnapping"), this);
     form->addRow(QString(), m_restoreSize);
 
+    // Zone color: a swatch that opens the color picker, plus a reset to the
+    // default green. The choice applies on Save.
+    auto *colorRow = new QHBoxLayout();
+    colorRow->setSpacing(8);
+    m_zoneColorBtn = new QPushButton(this);
+    m_zoneColorBtn->setFixedSize(56, 24);
+    m_zoneColorBtn->setCursor(Qt::PointingHandCursor);
+    m_zoneColorBtn->setToolTip(tr("Choose the zone color"));
+    colorRow->addWidget(m_zoneColorBtn);
+    auto *resetColorBtn = new QPushButton(tr("Reset"), this);
+    colorRow->addWidget(resetColorBtn);
+    colorRow->addStretch(1);
+    form->addRow(tr("Zone color:"), colorRow);
+
+    connect(m_zoneColorBtn, &QPushButton::clicked, this, [this]() {
+        const QColor c = QColorDialog::getColor(m_zoneColor, this, tr("Zone color"));
+        if (c.isValid()) setPendingZoneColor(c);
+    });
+    connect(resetColorBtn, &QPushButton::clicked, this, [this]() {
+        setPendingZoneColor(AppSettings::defaultZoneColor());
+    });
+
     outer->addLayout(form);
 
     // TODO (v1.1): Re-enable the "Excluded applications" section. Hidden for
@@ -84,8 +108,12 @@ SettingsWindow::SettingsWindow(SettingsStore *store, QWidget *parent)
     auto *iconLabel = new QLabel(this);
     QPixmap appPm(QStringLiteral(":/icons/app.png"));
     if (!appPm.isNull()) {
-        iconLabel->setPixmap(appPm.scaled(64, 64,
-            Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        // Scale for the backing store so the icon stays sharp on Retina.
+        const qreal dpr = devicePixelRatioF();
+        QPixmap scaled = appPm.scaled(QSize(64, 64) * dpr,
+            Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        scaled.setDevicePixelRatio(dpr);
+        iconLabel->setPixmap(scaled);
     }
     iconLabel->setFixedSize(64, 64);
     iconLabel->setStyleSheet(QStringLiteral("background: transparent; border: none;"));
@@ -153,7 +181,17 @@ void SettingsWindow::loadFromStore()
     m_defaultGap->setValue(s.defaultGap);
     m_showNumbers->setChecked(s.showZoneNumbers);
     m_restoreSize->setChecked(s.restoreSizeOnUnsnap);
+    setPendingZoneColor(s.zoneColor);
     // Exclusions: hidden in v1; values still round-trip through AppSettings.
+}
+
+void SettingsWindow::setPendingZoneColor(const QColor &c)
+{
+    m_zoneColor = c;
+    m_zoneColorBtn->setStyleSheet(QStringLiteral(
+        "QPushButton { background: %1; border: 1px solid rgba(255, 255, 255, 0.5);"
+        " border-radius: 4px; }").arg(c.name(QColor::HexRgb)));
+    m_zoneColorBtn->setAccessibleName(tr("Zone color %1").arg(c.name(QColor::HexRgb)));
 }
 
 void SettingsWindow::onAddExclusion()    { /* TODO v1.1: exclusion UI hidden */ }
@@ -174,6 +212,7 @@ void SettingsWindow::onSave()
     s.defaultGap = m_defaultGap->value();
     s.showZoneNumbers = m_showNumbers->isChecked();
     s.restoreSizeOnUnsnap = m_restoreSize->isChecked();
+    s.zoneColor = m_zoneColor;
     // Exclusions are not edited in v1; keep whatever was already persisted.
     m_store->setSettings(s);
     close();

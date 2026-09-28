@@ -318,10 +318,18 @@ void WindowManager::onDragEnded(QPoint p)
         return;
     }
 
-    // Use the AX handle captured at drag start. This is the EXACT window the
-    // user grabbed, regardless of where the cursor ended up or whether the
-    // OS briefly shifted focus during the drag.
-    void *handle = m_capturedWindow;
+    // Prefer the window under the cursor at drop: that is the window the user
+    // dragged. The handle from drag start points to the wrong window when the
+    // dragged window did not exist yet (a tab torn off into a new Chrome
+    // window) or when the app still reported its previous window as focused
+    // (a new JetBrains window). The drag-start handle stays as the fallback.
+    void *handle = m_ax->captureWindowAtPoint(p);
+    qDebug() << "[iFancyZones]   window under drop point =" << handle;
+    if (handle) {
+        if (m_capturedWindow) m_ax->releaseWindowHandle(m_capturedWindow);
+    } else {
+        handle = m_capturedWindow;
+    }
     m_capturedWindow = nullptr; // ownership transferred into the closure below
 
     if (!handle) {

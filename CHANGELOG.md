@@ -20,6 +20,50 @@ templates, Spaces awareness, layout import/export and auto-update.
 
 ---
 
+## [1.5.0] - 2026-09-28
+
+A configurable zone color, a new app icon, and fixes for zone cycling and
+snapping the wrong window.
+
+### Added
+
+- **Configurable zone color.** Settings has a new `Zone color:` row with a
+  swatch that opens the color picker and a `Reset` button that restores the
+  default green. The color applies to the snap preview, the layout editor and
+  the screen-number badges. `AppSettings::zoneColor` stores it as `zone-color`
+  (`#RRGGBB`) in `data.json`. `theme::zoneColor()` gives each surface the color
+  at its own alpha.
+
+### Changed
+
+- **New app icon.** A green squircle with three stacked windows replaces the
+  old icon in `resources/icons/iFancyZones.png` (1024 px, transparent margin
+  on the Apple icon grid) and in `packaging/iFancyZones.icns` (16 px to
+  1024 px). `package-dmg.sh` takes the DMG volume icon and the DMG file icon
+  from the same `.icns`.
+
+### Fixed
+
+- **The About card in Settings shows the app icon.** `qt_standard_project_setup()`
+  turns on AUTOMOC and AUTOUIC only, so `iFancyZones.qrc` was never compiled
+  and `:/icons/app.png` did not load. `CMakeLists.txt` now sets
+  `CMAKE_AUTORCC`. The card scales the icon for the backing store, so it
+  stays sharp on Retina.
+
+- **Cycle within a zone no longer changes another zone.** `raiseWindow` raised
+  the target window and then activated the whole app. Activation also brought
+  the app's previous key window forward, so a second window of the same app in
+  another zone moved to the front and took focus. Now the target becomes the
+  main window first, and SkyLight fronts the process with only that window.
+- **Snap moves the window you drag.** The drop handler used the AX focused
+  window captured at mouse-down. That was the wrong window when a Chrome tab
+  was torn off into a new window, or when an app (PhpStorm, WebStorm) still
+  reported its previous window as focused. Now the drop handler moves the
+  topmost window under the cursor at mouse-up, matched by `CGWindowID` or by
+  frame. The mouse-down window stays as the fallback.
+
+---
+
 ## [1.4.0] - 2026-09-17
 
 Menu-bar popover reliability plus a full redesign of both tabs.
@@ -69,7 +113,7 @@ Menu-bar popover reliability plus a full redesign of both tabs.
 ## [1.1.5] - [1.3.9]
 
 No per-version notes were kept for this range, and the DMGs were overwritten as
-each build replaced the last. Only `1.3.8`, `1.3.9` and `1.4.0` still exist
+each build replaced the last. Only `1.3.8`, `1.3.9`, `1.4.0` and later still exist
 locally under `releases/`, which is untracked.
 
 What is verifiable is that the following feature was present in the source at

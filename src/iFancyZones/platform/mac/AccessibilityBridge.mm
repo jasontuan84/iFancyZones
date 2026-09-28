@@ -3,6 +3,10 @@
 #import <AppKit/AppKit.h>
 #import <ApplicationServices/ApplicationServices.h>
 
+#include <dlfcn.h>
+#include <string.h>
+#include <unistd.h>
+
 // Private symbol: returns the CGWindowID for a given AX window. Used by
 // yabai/Rectangle/Hammerspoon and everyone else doing cross-process window
 // management. Weak-imported so the binary still loads if it ever disappears.
@@ -93,13 +97,23 @@ QRect FrameOfWindow(AXUIElementRef win) {
     return QRect(int(p.x), int(p.y), int(s.width), int(s.height));
 }
 
-pid_t PidForWindowAtPoint(CGPoint point) {
+struct WindowHit {
+    pid_t pid = 0;
+    CGWindowID wid = 0;
+    CGRect frame = CGRectZero;
+};
+
+// The topmost normal-layer window under `point`. Skips our own windows (the
+// zone overlays) and fully transparent helper windows, so it returns the
+// window the user sees under the cursor.
+WindowHit WindowAtPoint(CGPoint point) {
+    WindowHit hit;
     CFArrayRef list = CGWindowListCopyWindowInfo(
         kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements,
         kCGNullWindowID);
-    if (!list) return 0;
+    if (!list) return hit;
 
-    pid_t result = 0;
+    const pid_t selfPid = getpid();
     CFIndex count = CFArrayGetCount(list);
     for (CFIndex i = 0; i < count; ++i) {
         CFDictionaryRef info = (CFDictionaryRef)CFArrayGetValueAtIndex(list, i);
@@ -108,22 +122,116 @@ pid_t PidForWindowAtPoint(CGPoint point) {
         if (layerRef) CFNumberGetValue(layerRef, kCFNumberIntType, &layer);
         if (layer != 0) continue; // skip menu bar, dock, etc.
 
+        CFNumberRef alphaRef = (CFNumberRef)CFDictionaryGetValue(info, kCGWindowAlpha);
+        double alpha = 1.0;
+        if (alphaRef) CFNumberGetValue(alphaRef, kCFNumberDoubleType, &alpha);
+        if (alpha <= 0.0) continue;
+
+        CFNumberRef pidRef = (CFNumberRef)CFDictionaryGetValue(info, kCGWindowOwnerPID);
+        int pid = 0;
+        if (pidRef) CFNumberGetValue(pidRef, kCFNumberIntType, &pid);
+        if (pid == 0 || pid == selfPid) continue;
+
         CFDictionaryRef bounds = (CFDictionaryRef)CFDictionaryGetValue(info, kCGWindowBounds);
         if (!bounds) continue;
         CGRect r;
         if (!CGRectMakeWithDictionaryRepresentation(bounds, &r)) continue;
-        if (CGRectContainsPoint(r, point)) {
-            CFNumberRef pidRef = (CFNumberRef)CFDictionaryGetValue(info, kCGWindowOwnerPID);
-            if (pidRef) {
-                int pid = 0;
-                CFNumberGetValue(pidRef, kCFNumberIntType, &pid);
-                result = (pid_t)pid;
-            }
-            break;
-        }
+        if (!CGRectContainsPoint(r, point)) continue;
+
+        CFNumberRef widRef = (CFNumberRef)CFDictionaryGetValue(info, kCGWindowNumber);
+        int wid = 0;
+        if (widRef) CFNumberGetValue(widRef, kCFNumberIntType, &wid);
+        hit.pid = (pid_t)pid;
+        hit.wid = (CGWindowID)wid;
+        hit.frame = r;
+        break;
     }
     CFRelease(list);
-    return result;
+    return hit;
+}
+
+pid_t PidForWindowAtPoint(CGPoint point) {
+    return WindowAtPoint(point).pid;
+}
+
+// The AX element of window `wid` in app `pid`, retained. Matches by
+// CGWindowID when the private symbol exists. Otherwise, or when the app does
+// not map ids (some Java windows), it matches by frame. Returns nullptr when
+// nothing matches, so the caller never gets a sibling window by mistake.
+AXUIElementRef CopyWindowById(pid_t pid, CGWindowID wid, CGRect frame) {
+    AXUIElementRef app = CopyAppElementForPid(pid);
+    if (!app) return nullptr;
+    CFArrayRef windows = nullptr;
+    AXError err = AXUIElementCopyAttributeValue(app, kAXWindowsAttribute,
+                                                (CFTypeRef *)&windows);
+    CFRelease(app);
+    if (err != kAXErrorSuccess || !windows) {
+        if (windows) CFRelease(windows);
+        return nullptr;
+    }
+
+    AXUIElementRef target = nullptr;
+    const CFIndex n = CFArrayGetCount(windows);
+    if (&_AXUIElementGetWindow != nullptr && wid != 0) {
+        for (CFIndex i = 0; i < n && !target; ++i) {
+            AXUIElementRef w = (AXUIElementRef)CFArrayGetValueAtIndex(windows, i);
+            CGWindowID id = 0;
+            if (_AXUIElementGetWindow(w, &id) == kAXErrorSuccess && id == wid) target = w;
+        }
+    }
+    if (!target && !CGRectIsEmpty(frame)) {
+        const QRect want(int(frame.origin.x), int(frame.origin.y),
+                         int(frame.size.width), int(frame.size.height));
+        for (CFIndex i = 0; i < n && !target; ++i) {
+            AXUIElementRef w = (AXUIElementRef)CFArrayGetValueAtIndex(windows, i);
+            if (FrameOfWindow(w) == want) target = w;
+        }
+    }
+    if (target) CFRetain(target);
+    CFRelease(windows);
+    return target;
+}
+
+// Private SkyLight calls that front a process with ONE window and make that
+// window key. yabai and AltTab use the same pair. Resolved at runtime so the
+// binary still loads if SkyLight ever drops them.
+using SLPSSetFrontProcessWithOptionsFn =
+    CGError (*)(ProcessSerialNumber *, CGWindowID, uint32_t);
+using SLPSPostEventRecordToFn = CGError (*)(ProcessSerialNumber *, uint8_t *);
+
+constexpr uint32_t kCPSUserGenerated = 0x200;
+
+bool FrontProcessWithWindow(pid_t pid, CGWindowID wid)
+{
+    static void *skylight = dlopen(
+        "/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY);
+    static auto setFront = skylight
+        ? (SLPSSetFrontProcessWithOptionsFn)dlsym(skylight, "_SLPSSetFrontProcessWithOptions")
+        : nullptr;
+    static auto postEvent = skylight
+        ? (SLPSPostEventRecordToFn)dlsym(skylight, "SLPSPostEventRecordTo")
+        : nullptr;
+    if (!setFront || !postEvent || wid == 0) return false;
+
+    ProcessSerialNumber psn = {0, 0};
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    if (GetProcessForPID(pid, &psn) != noErr) return false;
+#pragma clang diagnostic pop
+
+    if (setFront(&psn, wid, kCPSUserGenerated) != kCGErrorSuccess) return false;
+
+    // Make the window key: one event record with a "focus" byte, sent twice.
+    uint8_t bytes[0xf8] = {0};
+    bytes[0x04] = 0xf8;
+    bytes[0x3a] = 0x10;
+    memcpy(&bytes[0x3c], &wid, sizeof(wid));
+    memset(&bytes[0x20], 0xff, 0x10);
+    bytes[0x08] = 0x01;
+    postEvent(&psn, bytes);
+    bytes[0x08] = 0x02;
+    postEvent(&psn, bytes);
+    return true;
 }
 
 } // unnamed namespace
@@ -202,6 +310,13 @@ AccessibilityBridge::WindowHandle AccessibilityBridge::captureFocusedWindow()
     return (WindowHandle)win; // ownership transferred to the caller
 }
 
+AccessibilityBridge::WindowHandle AccessibilityBridge::captureWindowAtPoint(const QPoint &screenPoint)
+{
+    const WindowHit hit = WindowAtPoint(CGPointMake(screenPoint.x(), screenPoint.y()));
+    if (hit.pid == 0) return nullptr;
+    return (WindowHandle)CopyWindowById(hit.pid, hit.wid, hit.frame);
+}
+
 bool AccessibilityBridge::moveCapturedWindow(WindowHandle h, const QRect &targetGlobal)
 {
     if (!h) return false;
@@ -271,17 +386,28 @@ bool AccessibilityBridge::raiseWindow(qint64 pid, quint32 cgWindowID)
 
     bool ok = false;
     if (target) {
-        AXUIElementPerformAction(target, kAXRaiseAction);
+        // Make the target the app's main window BEFORE activation. Activation
+        // brings the app's main and key windows forward, so a stale main window
+        // (for example a second window of the same app in another zone) would
+        // pop up there instead.
         AXUIElementSetAttributeValue(target, kAXMainAttribute, kCFBooleanTrue);
+
+        // Bring the process forward with only this window. Without this,
+        // activateWithOptions: also raises the app's previous key window,
+        // which can sit in a different zone.
+        const bool fronted = FrontProcessWithWindow((pid_t)pid, cgWindowID);
+        if (!fronted) {
+            NSRunningApplication *appNs =
+                [NSRunningApplication runningApplicationWithProcessIdentifier:(pid_t)pid];
+            if (appNs) [appNs activateWithOptions:0];
+        }
+
+        // Raise again after activation, which may have reordered the app's
+        // windows.
+        AXUIElementPerformAction(target, kAXRaiseAction);
         AXUIElementSetAttributeValue(target, kAXFocusedAttribute, kCFBooleanTrue);
         CFRelease(target);
-
-        NSRunningApplication *appNs =
-            [NSRunningApplication runningApplicationWithProcessIdentifier:(pid_t)pid];
-        if (appNs) {
-            [appNs activateWithOptions:NSApplicationActivateIgnoringOtherApps];
-            ok = true;
-        }
+        ok = true;
     }
     CFRelease(app);
     return ok;

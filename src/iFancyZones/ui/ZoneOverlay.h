@@ -8,7 +8,7 @@ namespace ifz {
 
 // Click-through overlay shown over one QScreen during a Space-gated drag.
 // Inactive zones are drawn with white translucent fill; the zone under
-// the cursor (active zone) is drawn green.
+// the cursor (active zone) is drawn in the zone color.
 class ZoneOverlay : public QWidget {
     Q_OBJECT
 public:
@@ -30,7 +30,7 @@ public:
 
     // The "outer" pixel rect of a zone — no gap applied. Use this for hit
     // testing so the user doesn't have to land exactly inside the gap-shrunk
-    // green area; the whole logical zone is clickable.
+    // colored area; the whole logical zone is clickable.
     QRect pixelRectOfZoneOuter(int index) const;
 
     // Make the underlying NSWindow be NSScreenSaverWindowLevel + click-through.

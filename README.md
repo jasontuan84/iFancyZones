@@ -9,7 +9,7 @@ Draw your own layouts, then snap any window into place with a drag and a keypres
 
 Inspired by Microsoft PowerToys FancyZones, rebuilt natively for macOS with Qt 6 and Objective-C++.
 
-[![Version](https://img.shields.io/badge/version-1.4.0-2f81f7?style=flat-square)](#version--author)
+[![Version](https://img.shields.io/badge/version-1.5.0-2f81f7?style=flat-square)](#version--author)
 [![Platform](https://img.shields.io/badge/platform-macOS%2012%2B-000000?style=flat-square&logo=apple&logoColor=white)](#requirements)
 [![Qt](https://img.shields.io/badge/Qt-6.5%2B-41cd52?style=flat-square&logo=qt&logoColor=white)](#third-party-libraries)
 [![C++](https://img.shields.io/badge/C%2B%2B-20-00599c?style=flat-square&logo=cplusplus&logoColor=white)](#build-from-source)
@@ -160,6 +160,7 @@ Reachable from **Settings...** in the popover footer.
 - Default zone gap
 - Show zone numbers during the snap preview
 - Restore the original size when unsnapping
+- Zone color for the snap preview, the layout editor and the screen-number badges
 - About block with icon, version, author and copyright
 
 ---
@@ -327,7 +328,7 @@ Released under the [MIT License](LICENSE). Qt is used under the LGPLv3 and is re
 ## Version & author
 
 <table>
-<tr><td width="180"><strong>Current version</strong></td><td><code>1.4.0</code></td></tr>
+<tr><td width="180"><strong>Current version</strong></td><td><code>1.5.0</code></td></tr>
 <tr><td><strong>Bundle identifier</strong></td><td><code>com.tuanquynh.ifancyzones</code></td></tr>
 <tr><td><strong>Minimum macOS</strong></td><td>12.0 Monterey</td></tr>
 <tr><td><strong>Built with</strong></td><td>Qt 6.11.1 · C++20 / Objective-C++20 · CMake 3.21+ · Ninja</td></tr>

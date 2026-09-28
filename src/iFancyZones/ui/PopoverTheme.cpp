@@ -9,6 +9,22 @@
 namespace ifz {
 namespace theme {
 
+namespace {
+QColor g_zoneColor(60, 200, 120);
+} // unnamed namespace
+
+QColor zoneColor(int alpha)
+{
+    QColor c = g_zoneColor;
+    c.setAlpha(alpha);
+    return c;
+}
+
+void setZoneColor(const QColor &c)
+{
+    if (c.isValid()) g_zoneColor = c;
+}
+
 void paintLayoutPreview(QPainter *p, const QRectF &target, const Layout &l,
                         const QColor &zoneColor)
 {

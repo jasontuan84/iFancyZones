@@ -7,6 +7,7 @@
 #include "services/SettingsStore.h"
 #include "services/WindowManager.h"
 #include "ui/LayoutEditor.h"
+#include "ui/PopoverTheme.h"
 #include "ui/SettingsWindow.h"
 #include "ui/TrayPopover.h"
 
@@ -40,6 +41,13 @@ void Application::bootstrap()
 
     m_settings = new SettingsStore(this);
     m_settings->load();
+
+    // Every zone surface paints with theme::zoneColor(). Keep it in sync with
+    // the user's setting.
+    theme::setZoneColor(m_settings->settings().zoneColor);
+    connect(m_settings, &SettingsStore::settingsChanged, this, [this]() {
+        theme::setZoneColor(m_settings->settings().zoneColor);
+    });
 
     m_accessibility = new AccessibilityBridge(this);
 

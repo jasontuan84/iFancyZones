@@ -1,5 +1,7 @@
 #include "ZoneEditorWidget.h"
 
+#include "ui/PopoverTheme.h"
+
 #include <QEnterEvent>
 #include <QMouseEvent>
 #include <QPainter>
@@ -246,8 +248,8 @@ void ZoneEditorWidget::paintEvent(QPaintEvent *)
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
 
-    QColor fill(60, 200, 120, 96);
-    QColor border(60, 200, 120, 220);
+    QColor fill = theme::zoneColor(96);
+    QColor border = theme::zoneColor(220);
     if (m_selected) {
         border.setAlpha(255);
     }

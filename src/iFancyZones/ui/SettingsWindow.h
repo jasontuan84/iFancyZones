@@ -1,11 +1,13 @@
 #pragma once
 
+#include <QColor>
 #include <QWidget>
 
 class QCheckBox;
 class QSpinBox;
 class QListWidget;
 class QLineEdit;
+class QPushButton;
 
 namespace ifz {
 
@@ -25,6 +27,7 @@ private slots:
 
 private:
     void loadFromStore();
+    void setPendingZoneColor(const QColor &c);
 
     SettingsStore *m_store;
     HotkeyEdit  *m_hotkey = nullptr;
@@ -34,6 +37,8 @@ private:
     QSpinBox    *m_defaultGap = nullptr;
     QCheckBox   *m_showNumbers = nullptr;
     QCheckBox   *m_restoreSize = nullptr;
+    QPushButton *m_zoneColorBtn = nullptr;
+    QColor       m_zoneColor;
     QListWidget *m_exclusions = nullptr;
     QLineEdit   *m_exclusionInput = nullptr;
 };

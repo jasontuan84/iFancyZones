@@ -1,6 +1,7 @@
 #include "ScreenNumberBadge.h"
 
 #include "platform/mac/AppKitBridge.h"
+#include "ui/PopoverTheme.h"
 
 #include <QFont>
 #include <QPainter>
@@ -31,7 +32,7 @@ void ScreenNumberBadge::paintEvent(QPaintEvent *)
     p.setRenderHint(QPainter::Antialiasing);
 
     QRect r(1, 1, m_diameter - 2, m_diameter - 2);
-    p.setBrush(QColor(60, 200, 120, 240));
+    p.setBrush(theme::zoneColor(240));
     p.setPen(Qt::NoPen);
     p.drawEllipse(r);
 
@@ -82,7 +83,7 @@ void ScreenIdentifierOverlay::paintEvent(QPaintEvent *)
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
 
-    // Large green circle in the centre of the screen.
+    // Large zone-colored circle in the centre of the screen.
     const int diameter = qMin(width(), height()) / 3;
     const QPoint c(width() / 2, height() / 2);
     QRect circle(c.x() - diameter / 2, c.y() - diameter / 2, diameter, diameter);
@@ -94,7 +95,7 @@ void ScreenIdentifierOverlay::paintEvent(QPaintEvent *)
         p.drawEllipse(circle.adjusted(-i, -i, i, i));
     }
 
-    p.setBrush(QColor(60, 200, 120, 245));
+    p.setBrush(theme::zoneColor(245));
     p.setPen(QPen(QColor(255, 255, 255, 200), 6));
     p.drawEllipse(circle);
 

@@ -34,6 +34,11 @@ inline QColor warn()          { return QColor(0xF5, 0xA5, 0x24); } // AX banner
 
 inline int cardRadius()       { return 10; }
 
+// The user's zone color (AppSettings::zoneColor) at `alpha`. Application
+// keeps it in sync with the settings, so every zone surface reads one value.
+QColor zoneColor(int alpha = 255);
+void setZoneColor(const QColor &c);
+
 // Paint a layout's zones into `target`, scaled to fit and centred. Used for
 // both the display cards and the layout rows, so a layout always reads the
 // same wherever it appears. `zoneColor` distinguishes the active layout.

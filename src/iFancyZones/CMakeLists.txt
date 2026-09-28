@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(iFancyZones
-    VERSION 1.4.0
+    VERSION 1.5.0
     DESCRIPTION "Zone-based window manager for macOS"
     LANGUAGES CXX OBJCXX
 )
@@ -16,6 +16,9 @@ endif()
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets Svg)
 qt_standard_project_setup()
+# qt_standard_project_setup() turns on AUTOMOC and AUTOUIC only. The .qrc in
+# the sources needs AUTORCC, or ":/icons/..." resources are never embedded.
+set(CMAKE_AUTORCC ON)
 
 set(IFZ_CORE_SOURCES
     core/Zone.h core/Zone.cpp

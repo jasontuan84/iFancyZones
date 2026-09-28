@@ -5,7 +5,7 @@
 
 namespace ifz {
 
-// One zone inside the layout editor canvas. Translucent green rectangle,
+// One zone inside the layout editor canvas. Translucent zone-colored rectangle,
 // supports drag (interior) + resize (edges/corners) + delete button +
 // auto-alignment preset icons.
 class ZoneEditorWidget : public QWidget {

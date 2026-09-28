@@ -2,6 +2,7 @@
 
 #include "core/LayoutEngine.h"
 #include "platform/mac/AppKitBridge.h"
+#include "ui/PopoverTheme.h"
 
 #include <QPainter>
 #include <QWindow>
@@ -84,8 +85,8 @@ void ZoneOverlay::paintEvent(QPaintEvent *)
 
         QColor fill, border;
         if (i == m_active) {
-            fill   = QColor(60, 200, 120, 110);
-            border = QColor(60, 200, 120, 240);
+            fill   = theme::zoneColor(110);
+            border = theme::zoneColor(240);
         } else {
             fill   = QColor(255, 255, 255, 90);
             border = QColor(255, 255, 255, 200);
