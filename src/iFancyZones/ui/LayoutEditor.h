@@ -13,7 +13,8 @@ class ZoneEditorWidget;
 
 // Full-screen editor for a single Layout. Opens on the screen where the
 // popover was anchored. Hosts:
-//  - A dim translucent backdrop covering the screen.
+//  - A dim translucent backdrop covering the screen. The menu bar and the
+//    Dock get a darker shade, because a zone cannot cover them.
 //  - A floating toolbar at top-center.
 //  - One ZoneEditorWidget per zone in the layout.
 class LayoutEditor : public QWidget {
@@ -43,7 +44,11 @@ private slots:
     void onZoneDeleteRequested();
 
 private:
-    QRect canvasRect() const;     // rectangle inside this widget where zones live
+    // The rectangle inside this widget where zones live: the screen's
+    // available area (no menu bar, no Dock), in widget-local coordinates.
+    // WindowManager snaps into availableGeometry(), so the editor must
+    // measure zones against the same rectangle.
+    QRect canvasRect() const { return m_canvas; }
     void rebuildZoneWidgets();
     void raiseToolbar();          // keep the floating toolbar above all zones
     void selectZone(ZoneEditorWidget *w);
@@ -51,6 +56,7 @@ private:
 
     Layout m_layout;
     bool m_isNew;
+    QRect m_canvas;
     QPointer<EditorToolbar> m_toolbar;
     QVector<ZoneEditorWidget *> m_zones;
     ZoneEditorWidget *m_selected = nullptr;

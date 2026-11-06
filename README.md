@@ -9,7 +9,7 @@ Draw your own layouts, then snap any window into place with a drag and a keypres
 
 Inspired by Microsoft PowerToys FancyZones, rebuilt natively for macOS with Qt 6 and Objective-C++.
 
-[![Version](https://img.shields.io/badge/version-1.5.0-2f81f7?style=flat-square)](#version--author)
+[![Version](https://img.shields.io/badge/version-1.6.0-2f81f7?style=flat-square)](#version--author)
 [![Platform](https://img.shields.io/badge/platform-macOS%2012%2B-000000?style=flat-square&logo=apple&logoColor=white)](#requirements)
 [![Qt](https://img.shields.io/badge/Qt-6.5%2B-41cd52?style=flat-square&logo=qt&logoColor=white)](#third-party-libraries)
 [![C++](https://img.shields.io/badge/C%2B%2B-20-00599c?style=flat-square&logo=cplusplus&logoColor=white)](#build-from-source)
@@ -45,13 +45,14 @@ Inspired by Microsoft PowerToys FancyZones, rebuilt natively for macOS with Qt 6
 |---|---|
 | **Menu-bar only** | Runs as an `LSUIElement` agent. No Dock icon, no window clutter. One click on the tray icon opens the popover. |
 | **Drag-to-snap** | Grab a window, hold the activation key (default `Space`), the zone overlay appears, drop the window and it snaps. |
-| **Free-form editor** | Full-screen canvas per display. Create, drag, resize and delete zones anywhere. No fixed grid. |
+| **Free-form editor** | A canvas per display, the area a snap can fill (no menu bar, no Dock). Create, drag, resize and delete zones anywhere. No fixed grid. |
 | **12 preset alignments** | Each zone offers a centered 4x3 grid of hand-painted thumbnails: halves, thirds, quadrants, full. One click aligns it. |
 | **Adjustable gaps** | Live `Gap +` / `Gap -` in the editor toolbar. Zones shrink visually as you tune the spacing. |
 | **True multi-monitor** | Every display binds to its own layout via `CGDisplayUnitNumber`, stable across reconnects. Identical monitors stay independent. |
 | **Detect displays** | A giant numbered badge flashes on every physical screen for 3 seconds so you always know which row is which. |
 | **Cycle within a zone** | Multiple windows sharing one zone? A hotkey (default `Opt+Tab`) rotates which one is on top. |
-| **3D app switcher** | An optional carousel overlay (default `Opt+Space`). Hold the modifier, navigate with the arrow keys, release to raise. |
+| **3D app switcher** | An optional carousel overlay (default `Opt+Space`). Hold the modifier, navigate with the arrow keys, release to raise the app's frontmost window. |
+| **Liquid Glass** | On macOS 26 and later, the popover, the editor toolbar and the app switcher sit on Liquid Glass. Older systems keep the vibrancy look. |
 | **Templates & search** | Five starter templates (Focus, Columns, Rows, Grid, Priority) plus live search across your own layouts. |
 | **Guided permissions** | First launch prompts for Accessibility and a 2-second watchdog re-installs the event tap the moment you grant it. No restart. |
 | **Self-contained bundle** | `macdeployqt` embeds the Qt frameworks, so the DMG runs on machines with no Qt installed. |
@@ -328,7 +329,7 @@ Released under the [MIT License](LICENSE). Qt is used under the LGPLv3 and is re
 ## Version & author
 
 <table>
-<tr><td width="180"><strong>Current version</strong></td><td><code>1.5.0</code></td></tr>
+<tr><td width="180"><strong>Current version</strong></td><td><code>1.6.0</code></td></tr>
 <tr><td><strong>Bundle identifier</strong></td><td><code>com.tuanquynh.ifancyzones</code></td></tr>
 <tr><td><strong>Minimum macOS</strong></td><td>12.0 Monterey</td></tr>
 <tr><td><strong>Built with</strong></td><td>Qt 6.11.1 · C++20 / Objective-C++20 · CMake 3.21+ · Ninja</td></tr>

@@ -7,6 +7,8 @@
 #include <QPainter>
 #include <QPainterPath>
 
+#include <algorithm>
+
 namespace ifz {
 
 namespace {
@@ -75,15 +77,29 @@ void ZoneEditorWidget::setZoneRect(const QRect &r)
 
 ZoneEditorWidget::DragMode ZoneEditorWidget::hitTest(const QPoint &p) const
 {
-    const QRect r = rect();
-    bool l = p.x() <= kEdge;
-    bool t = p.y() <= kEdge;
-    bool right = p.x() >= r.width() - kEdge;
-    bool bot   = p.y() >= r.height() - kEdge;
-    if (l && t)       return DragMode::ResizeTL;
-    if (right && t)   return DragMode::ResizeTR;
-    if (l && bot)     return DragMode::ResizeBL;
-    if (right && bot) return DragMode::ResizeBR;
+    // The visible border sits m_gap points inside the widget edge. Measure the
+    // band from the widget edge to kGrip points past the border, so the user
+    // can grab the border itself and the gap outside it. Cap the band so a
+    // small zone keeps a Move area in the middle.
+    const int w = width();
+    const int h = height();
+    const int shortSide = std::min(w, h);
+    const int edge   = std::min(m_gap + kGrip, shortSide / 4);
+    const int corner = std::min(edge + kCornerExtra, shortSide / 3);
+
+    const bool l = p.x() <= edge;
+    const bool t = p.y() <= edge;
+    const bool right = p.x() >= w - 1 - edge;
+    const bool bot   = p.y() >= h - 1 - edge;
+    const bool nearL = p.x() <= corner;
+    const bool nearT = p.y() <= corner;
+    const bool nearR = p.x() >= w - 1 - corner;
+    const bool nearB = p.y() >= h - 1 - corner;
+
+    if ((l && nearT) || (t && nearL))         return DragMode::ResizeTL;
+    if ((right && nearT) || (t && nearR))     return DragMode::ResizeTR;
+    if ((l && nearB) || (bot && nearL))       return DragMode::ResizeBL;
+    if ((right && nearB) || (bot && nearR))   return DragMode::ResizeBR;
     if (l)            return DragMode::ResizeL;
     if (right)        return DragMode::ResizeR;
     if (t)            return DragMode::ResizeT;
@@ -91,9 +107,25 @@ ZoneEditorWidget::DragMode ZoneEditorWidget::hitTest(const QPoint &p) const
     return DragMode::Move;
 }
 
+void ZoneEditorWidget::setHoverMode(DragMode mode)
+{
+    if (m_hoverMode == mode) return;
+    m_hoverMode = mode;
+    update();
+}
+
 void ZoneEditorWidget::updateCursor(const QPoint &p)
 {
-    switch (hitTest(p)) {
+    // The delete button overlaps the top-right resize corner. A click there
+    // deletes, so the cursor must not promise a resize.
+    if ((m_selected || m_hovered) && deleteButtonRect().contains(p)) {
+        setHoverMode(DragMode::None);
+        setCursor(Qt::PointingHandCursor);
+        return;
+    }
+    const DragMode mode = hitTest(p);
+    setHoverMode(mode == DragMode::Move ? DragMode::None : mode);
+    switch (mode) {
         case DragMode::ResizeL:
         case DragMode::ResizeR:  setCursor(Qt::SizeHorCursor); break;
         case DragMode::ResizeT:
@@ -192,6 +224,7 @@ void ZoneEditorWidget::mousePressEvent(QMouseEvent *e)
     }
 
     m_drag = hitTest(p);
+    if (m_drag != DragMode::Move) setHoverMode(m_drag);
     m_dragOrigin = e->globalPosition().toPoint();
     m_startGeom = geometry();
 }
@@ -225,9 +258,10 @@ void ZoneEditorWidget::mouseMoveEvent(QMouseEvent *e)
     emit changed();
 }
 
-void ZoneEditorWidget::mouseReleaseEvent(QMouseEvent *)
+void ZoneEditorWidget::mouseReleaseEvent(QMouseEvent *e)
 {
     m_drag = DragMode::None;
+    updateCursor(e->position().toPoint());
 }
 
 void ZoneEditorWidget::enterEvent(QEnterEvent *)
@@ -239,6 +273,7 @@ void ZoneEditorWidget::enterEvent(QEnterEvent *)
 void ZoneEditorWidget::leaveEvent(QEvent *)
 {
     m_hovered = false;
+    if (m_drag == DragMode::None) m_hoverMode = DragMode::None;
     setCursor(Qt::ArrowCursor);
     update();
 }
@@ -262,6 +297,25 @@ void ZoneEditorWidget::paintEvent(QPaintEvent *)
     p.setBrush(fill);
     p.setPen(QPen(border, m_selected ? 1.5 : 1.0));
     p.drawRoundedRect(r, 8, 8);
+
+    // Resize affordance: a thick bar on each edge the cursor would move, so
+    // the user sees the grab before pressing.
+    if (m_hoverMode != DragMode::None) {
+        const bool hl = m_hoverMode == DragMode::ResizeL || m_hoverMode == DragMode::ResizeTL
+                     || m_hoverMode == DragMode::ResizeBL;
+        const bool hr = m_hoverMode == DragMode::ResizeR || m_hoverMode == DragMode::ResizeTR
+                     || m_hoverMode == DragMode::ResizeBR;
+        const bool ht = m_hoverMode == DragMode::ResizeT || m_hoverMode == DragMode::ResizeTL
+                     || m_hoverMode == DragMode::ResizeTR;
+        const bool hb = m_hoverMode == DragMode::ResizeB || m_hoverMode == DragMode::ResizeBL
+                     || m_hoverMode == DragMode::ResizeBR;
+        p.setPen(QPen(QColor(255, 255, 255, 235), 4, Qt::SolidLine, Qt::RoundCap));
+        const int in = 10; // keep the bar clear of the rounded corners
+        if (hl) p.drawLine(r.left(),  r.top() + in,  r.left(),  r.bottom() - in);
+        if (hr) p.drawLine(r.right(), r.top() + in,  r.right(), r.bottom() - in);
+        if (ht) p.drawLine(r.left() + in, r.top(),    r.right() - in, r.top());
+        if (hb) p.drawLine(r.left() + in, r.bottom(), r.right() - in, r.bottom());
+    }
 
     // Number badge
     QRect badge(r.left() + 8, r.top() + 8, kBadgeDiameter, kBadgeDiameter);

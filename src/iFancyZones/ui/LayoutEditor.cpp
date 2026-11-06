@@ -8,6 +8,9 @@
 #include <QGuiApplication>
 #include <QKeyEvent>
 #include <QPainter>
+#include <QPainterPath>
+#include <QWindow>
+#include <QRegion>
 #include <QScreen>
 
 namespace ifz {
@@ -39,6 +42,7 @@ void LayoutEditor::open()
     // Lock to full-screen: the backdrop is not movable/resizable, only the
     // zones inside it are interactive.
     setFixedSize(screen->geometry().size());
+    m_canvas = screen->availableGeometry().translated(-screen->geometry().topLeft());
 
     // Force native window creation so AppKitBridge can configure the NSWindow.
     winId();
@@ -52,10 +56,19 @@ void LayoutEditor::open()
     // Toolbar: floating top-center, slightly wider to fit name editor + buttons.
     const QSize tbHint(780, 56);
     m_toolbar->resize(tbHint);
-    m_toolbar->move((width() - tbHint.width()) / 2, 24);
+    m_toolbar->move((width() - tbHint.width()) / 2, m_canvas.top() + 16);
 
     show();
     raise();
+    if (AppKitBridge::hasLiquidGlass()) {
+        if (QWindow *qw = windowHandle()) {
+            AppKitBridge::useDarkAppearance(qw);
+            AppKitBridge::Glass glass;
+            glass.cornerRadius = m_toolbar->glassRadius();
+            AppKitBridge::setGlassBackdrop(qw, "toolbar",
+                                           QRectF(m_toolbar->geometry()), glass);
+        }
+    }
     activateWindow();
     setFocus();
 }
@@ -64,14 +77,6 @@ void LayoutEditor::cancel()
 {
     emit cancelled();
     close();
-}
-
-QRect LayoutEditor::canvasRect() const
-{
-    // The whole screen is the canvas: zones can be dragged/dropped anywhere and
-    // alignment presets are measured from the very top edge. The toolbar floats
-    // on top of this area (see raiseToolbar()) rather than carving space out of it.
-    return rect();
 }
 
 void LayoutEditor::rebuildZoneWidgets()
@@ -225,7 +230,21 @@ void LayoutEditor::mousePressEvent(QMouseEvent *e)
 void LayoutEditor::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
-    p.fillRect(rect(), QColor(0, 0, 0, 110));
+    p.setRenderHint(QPainter::Antialiasing);
+    // Leave the toolbar's capsule undimmed, so the glass behind it shows the
+    // desktop instead of this backdrop.
+    QPainterPath dim;
+    dim.addRect(rect());
+    if (m_toolbar && AppKitBridge::hasLiquidGlass()) {
+        QPainterPath capsule;
+        const qreal rad = m_toolbar->glassRadius();
+        capsule.addRoundedRect(QRectF(m_toolbar->geometry()), rad, rad);
+        dim = dim.subtracted(capsule);
+    }
+    p.fillPath(dim, QColor(0, 0, 0, 110));
+    // Shade the menu bar and Dock areas: snapping never places a window there.
+    QRegion blocked = QRegion(rect()).subtracted(QRegion(m_canvas));
+    for (const QRect &r : blocked) p.fillRect(r, QColor(0, 0, 0, 90));
 }
 
 } // namespace ifz

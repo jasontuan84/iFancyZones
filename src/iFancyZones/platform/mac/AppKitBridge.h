@@ -1,7 +1,9 @@
 #pragma once
 
-#include <QtCore/QtGlobal>
+#include <QColor>
+#include <QRectF>
 
+class QPainterPath;
 class QWindow;
 
 namespace ifz {
@@ -35,16 +37,32 @@ public:
     // the platform window exists. Safe to call once per window.
     static void addBlurBackdrop(QWindow *qwin);
 
-    // Menu-bar popover vibrancy, masked to the panel outline: a rounded
-    // rectangle plus the beak that points at the status item. All values are
-    // Qt logical points with a top-left origin; `beakCenterX` is the beak tip
-    // measured from the window's left edge. Safe to call on every show, which
-    // is required since the beak moves with the icon.
-    static void addPopoverBlur(QWindow *qwin,
-                               double cornerRadius,
-                               double beakHeight,
-                               double beakWidth,
-                               double beakCenterX);
+    // Vibrancy behind the whole window, masked to `outline`. The outline is
+    // in window-local logical points with a top-left origin, the same path
+    // the Qt side paints, so the blur and the painted edge always coincide.
+    // Safe to call on every show.
+    static void setShapedBlurBackdrop(QWindow *qwin, const QPainterPath &outline);
+
+    // True when the system renders Liquid Glass (macOS 26 or later).
+    static bool hasLiquidGlass();
+
+    // How one glass surface looks.
+    struct Glass {
+        double cornerRadius = 0;
+        QColor tint;          // invalid: no tint
+        bool clear = false;   // the more transparent "clear" glass style
+    };
+
+    // Put a glass surface behind the Qt content at `rect` (window-local
+    // logical points, top-left origin). `key` names the surface: a second
+    // call with the same key moves and restyles it. Before macOS 26 the
+    // surface is a rounded vibrancy view instead. Call after show().
+    static void setGlassBackdrop(QWindow *qwin, const char *key,
+                                 const QRectF &rect, const Glass &glass);
+
+    // Render the window in Dark Mode whatever the system setting. The app
+    // paints light text on its surfaces, so glass and vibrancy must stay dark.
+    static void useDarkAppearance(QWindow *qwin);
 
     // Switch the running app's activation policy to "accessory" — the
     // LSUIElement-equivalent at runtime. Keeps Cmd-Tab clean even if

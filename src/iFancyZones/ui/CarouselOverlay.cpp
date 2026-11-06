@@ -109,6 +109,12 @@ void CarouselOverlay::showOnScreen(QScreen *screen)
     show();
     raise();
     configureNative();
+    const QRectF platter = platterRect();
+    if (!platter.isEmpty()) {
+        AppKitBridge::Glass glass;
+        glass.cornerRadius = platterRadius();
+        AppKitBridge::setGlassBackdrop(windowHandle(), "platter", platter, glass);
+    }
     update();
 
     m_fade->setStartValue(windowOpacity());
@@ -137,11 +143,28 @@ void CarouselOverlay::configureNative()
     if (m_nativeConfigured) return;
     if (QWindow *w = windowHandle()) {
         AppKitBridge::configureAsOverlay(w);
-        // NOTE: no NSVisualEffectView here — as a subview of Qt's content view
-        // it would paint OVER the carousel. The translucent backdrop is drawn
-        // by paintEvent() instead.
+        AppKitBridge::useDarkAppearance(w);
+        // The glass platter is a sibling BELOW Qt's view (see showOnScreen).
+        // A subview of Qt's view would paint OVER the carousel.
         m_nativeConfigured = true;
     }
+}
+
+QRectF CarouselOverlay::platterRect() const
+{
+    if (!AppKitBridge::hasLiquidGlass() || height() <= 0) return QRectF();
+    // Same vertical geometry as paintEvent(): the card plus the upper part of
+    // its reflection, with a margin all round.
+    const qreal cardH = height() * kCardHeightFrac;
+    const qreal cy = height() * 0.5 - cardH * kReflectFrac * 0.5;
+    const qreal top = cy - cardH * 0.5 - cardH * 0.10;
+    const qreal bottom = cy + cardH * 0.5 + cardH * kReflectFrac * 0.75;
+    return QRectF(width() * 0.04, top, width() * 0.92, bottom - top);
+}
+
+qreal CarouselOverlay::platterRadius() const
+{
+    return std::min<qreal>(48.0, platterRect().height() * 0.12);
 }
 
 QPixmap CarouselOverlay::renderCard(const RunningAppInfo &app,
@@ -304,8 +327,17 @@ void CarouselOverlay::paintEvent(QPaintEvent *)
     QPainter p(this);
     p.setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
 
-    // Translucent dark backdrop, full screen, no panel around the cards.
-    p.fillRect(rect(), QColor(0, 0, 0, 140));
+    // Translucent dark backdrop, full screen. With Liquid Glass the platter
+    // is cut out of it, so the glass refracts the desktop, not this shade.
+    QPainterPath shade;
+    shade.addRect(rect());
+    const QRectF platter = platterRect();
+    if (!platter.isEmpty()) {
+        QPainterPath cut;
+        cut.addRoundedRect(platter, platterRadius(), platterRadius());
+        shade = shade.subtracted(cut);
+    }
+    p.fillPath(shade, QColor(0, 0, 0, 140));
 
     // Vertical centre chosen so the tall card plus its reflection fit on
     // screen (reflection extends below the card's foot).

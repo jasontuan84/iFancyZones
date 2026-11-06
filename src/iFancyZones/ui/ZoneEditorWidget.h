@@ -52,6 +52,7 @@ private:
 
     DragMode hitTest(const QPoint &localPos) const;
     void updateCursor(const QPoint &localPos);
+    void setHoverMode(DragMode mode);
     void clampToCanvas();
     QRect deleteButtonRect() const;
     QRect presetIconRect(int i) const;
@@ -64,10 +65,15 @@ private:
     bool m_hovered = false;
 
     DragMode m_drag = DragMode::None;
+    DragMode m_hoverMode = DragMode::None; // edge under the cursor, for the highlight
     QPoint m_dragOrigin;
     QRect m_startGeom;
 
-    static constexpr int kEdge = 8;       // resize hit-test width
+    // The resize band runs from the widget edge, through the invisible gap,
+    // to kGrip points inside the visible border. A corner catches the cursor
+    // kCornerExtra points further along each side than an edge does.
+    static constexpr int kGrip = 12;
+    static constexpr int kCornerExtra = 10;
     static constexpr int kMinSize = 40;
 };
 

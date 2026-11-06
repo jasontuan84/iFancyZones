@@ -62,7 +62,7 @@ void Application::bootstrap()
     m_windowMgr->start();
 
     // 3D app switcher (Alt+Space carousel). Independent of the zone manager.
-    m_switcher = new AppSwitcher(m_settings, this);
+    m_switcher = new AppSwitcher(m_settings, m_accessibility, this);
     m_switcher->start();
 
     m_tray = new TrayController(this);

@@ -1,5 +1,6 @@
 #include "AppSwitcher.h"
 
+#include "platform/mac/AccessibilityBridge.h"
 #include "platform/mac/AppSwitcherBridge.h"
 #include "platform/mac/HotkeyManager.h"
 #include "platform/mac/SwitcherInput.h"
@@ -13,8 +14,8 @@
 
 namespace ifz {
 
-AppSwitcher::AppSwitcher(SettingsStore *store, QObject *parent)
-    : QObject(parent), m_store(store)
+AppSwitcher::AppSwitcher(SettingsStore *store, AccessibilityBridge *ax, QObject *parent)
+    : QObject(parent), m_store(store), m_ax(ax)
 {
     m_hotkey = new HotkeyManager(this);
     connect(m_hotkey, &HotkeyManager::triggered, this, &AppSwitcher::onTriggered);
@@ -110,9 +111,14 @@ void AppSwitcher::close(bool activateSelection)
         m_overlay->hideOverlay();
     }
 
-    if (activateSelection && pid > 0) {
-        AppSwitcherBridge::activateApp(pid);
-    }
+    if (!activateSelection || pid <= 0) return;
+
+    // Raise only the app's frontmost window, the way Cmd-Tab does. Activating
+    // with all windows pulls every window of the app forward, so a second
+    // Chrome window in another zone would cover the app that sits there.
+    const quint32 wid = AppSwitcherBridge::frontmostWindowOf(pid);
+    if (wid != 0 && m_ax && m_ax->raiseWindow(pid, wid)) return;
+    AppSwitcherBridge::activateApp(pid);
 }
 
 } // namespace ifz

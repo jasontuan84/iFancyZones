@@ -25,8 +25,14 @@ public:
     // ratio for crispness on Retina).
     static QList<RunningAppInfo> runningApps(int iconPx = 160);
 
-    // Bring the app owning `pid` to the front (raise + activate all windows).
-    // Returns true on success.
+    // The CGWindowID of the app's topmost on-screen normal window, or 0 when
+    // the app has no window on the current space (hidden, minimized, or on
+    // another space). The topmost window is the one the user used last.
+    static quint32 frontmostWindowOf(qint64 pid);
+
+    // Unhide and activate the app owning `pid`. Activation brings forward
+    // only the app's main and key windows, not every window. Use this when
+    // frontmostWindowOf() finds no window. Returns true on success.
     static bool activateApp(qint64 pid);
 };
 

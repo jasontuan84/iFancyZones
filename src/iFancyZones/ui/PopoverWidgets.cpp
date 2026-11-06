@@ -316,7 +316,8 @@ void SegmentedControl::paintEvent(QPaintEvent *)
     const QRectF track = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
     p.setPen(QPen(theme::cardBorder(), 1));
     p.setBrush(theme::card());
-    p.drawRoundedRect(track, 9, 9);
+    // Capsule track and capsule selection, the Liquid Glass control shape.
+    p.drawRoundedRect(track, track.height() / 2, track.height() / 2);
 
     const qreal segW = track.width() / m_titles.size();
     for (int i = 0; i < m_titles.size(); ++i) {
@@ -326,7 +327,7 @@ void SegmentedControl::paintEvent(QPaintEvent *)
             QRectF fill = seg.adjusted(3, 3, -3, -3);
             p.setPen(Qt::NoPen);
             p.setBrush(selected ? QColor(255, 255, 255, 46) : QColor(255, 255, 255, 20));
-            p.drawRoundedRect(fill, 7, 7);
+            p.drawRoundedRect(fill, fill.height() / 2, fill.height() / 2);
         }
         QFont f = font();
         f.setWeight(selected ? QFont::DemiBold : QFont::Normal);

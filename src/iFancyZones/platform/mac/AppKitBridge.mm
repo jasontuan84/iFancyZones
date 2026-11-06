@@ -1,5 +1,6 @@
 #include "AppKitBridge.h"
 
+#include <QPainterPath>
 #include <QWindow>
 
 #import <AppKit/AppKit.h>
@@ -132,11 +133,77 @@ void AppKitBridge::addBlurBackdrop(QWindow *qwin)
     (void)BlurSiblingOf(nswin, NSVisualEffectMaterialHUDWindow);
 }
 
-void AppKitBridge::addPopoverBlur(QWindow *qwin,
-                                  double cornerRadius,
-                                  double beakHeight,
-                                  double beakWidth,
-                                  double beakCenterX)
+namespace {
+
+// `path` (top-left origin) as an AppKit path in a view of height `h`
+// (bottom-left origin).
+NSBezierPath *BezierFromPath(const QPainterPath &path, CGFloat h)
+{
+    auto pt = [h](const QPainterPath::Element &e) { return NSMakePoint(e.x, h - e.y); };
+    NSBezierPath *b = [NSBezierPath bezierPath];
+    for (int i = 0; i < path.elementCount(); ++i) {
+        const QPainterPath::Element e = path.elementAt(i);
+        switch (e.type) {
+        case QPainterPath::MoveToElement:
+            if (i > 0) [b closePath];
+            [b moveToPoint:pt(e)];
+            break;
+        case QPainterPath::LineToElement:
+            [b lineToPoint:pt(e)];
+            break;
+        case QPainterPath::CurveToElement:
+            if (i + 2 < path.elementCount()) {
+                [b curveToPoint:pt(path.elementAt(i + 2))
+                  controlPoint1:pt(e)
+                  controlPoint2:pt(path.elementAt(i + 1))];
+                i += 2;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    [b closePath];
+    return b;
+}
+
+// A stretchable rounded-rectangle mask for a vibrancy view.
+NSImage *RoundedMask(CGFloat radius)
+{
+    const CGFloat side = radius * 2 + 1;
+    NSImage *mask = [NSImage imageWithSize:NSMakeSize(side, side)
+                                   flipped:NO
+                            drawingHandler:^BOOL(NSRect r) {
+        [[NSColor blackColor] set];
+        [[NSBezierPath bezierPathWithRoundedRect:r xRadius:radius yRadius:radius] fill];
+        return YES;
+    }];
+    mask.capInsets = NSEdgeInsetsMake(radius, radius, radius, radius);
+    mask.resizingMode = NSImageResizingModeStretch;
+    return mask;
+}
+
+// `r` (window-local, top-left origin) in the coordinates of the view that
+// hosts Qt's content view.
+NSRect HostRect(NSView *host, NSView *qtView, const QRectF &r)
+{
+    const NSRect q = qtView.frame;
+    const CGFloat y = host.isFlipped ? q.origin.y + r.y()
+                                     : q.origin.y + q.size.height - r.y() - r.height();
+    return NSMakeRect(q.origin.x + r.x(), y, r.width(), r.height());
+}
+
+NSView *FindBackdrop(NSView *host, NSString *identifier)
+{
+    for (NSView *sub in host.subviews) {
+        if ([sub.identifier isEqualToString:identifier]) return sub;
+    }
+    return nil;
+}
+
+} // unnamed namespace
+
+void AppKitBridge::setShapedBlurBackdrop(QWindow *qwin, const QPainterPath &outline)
 {
     NSWindow *nswin = NativeWindow(qwin);
     if (!nswin) return;
@@ -147,38 +214,80 @@ void AppKitBridge::addPopoverBlur(QWindow *qwin,
     const CGFloat h = blur.bounds.size.height;
     if (w <= 0 || h <= 0) return;
 
-    // AppKit's origin is bottom-left, so the body's top edge sits at h - beak.
-    const CGFloat bodyTop = h - beakHeight;
-    const CGFloat cx = beakCenterX;
-    const CGFloat halfBeak = beakWidth / 2.0;
-
     // maskImage (rather than a CALayer mask) is the documented way to shape an
-    // NSVisualEffectView; it keeps the vibrancy and the window shadow correct.
-    NSImage *mask = [NSImage imageWithSize:NSMakeSize(w, h)
-                                   flipped:NO
-                            drawingHandler:^BOOL(NSRect) {
-        NSBezierPath *path =
-            [NSBezierPath bezierPathWithRoundedRect:NSMakeRect(0, 0, w, bodyTop)
-                                            xRadius:cornerRadius
-                                            yRadius:cornerRadius];
-        NSBezierPath *beak = [NSBezierPath bezierPath];
-        [beak moveToPoint:NSMakePoint(cx - halfBeak, bodyTop - 1.0)];
-        [beak curveToPoint:NSMakePoint(cx, h)
-             controlPoint1:NSMakePoint(cx - halfBeak * 0.35, h - beakHeight * 0.15)
-             controlPoint2:NSMakePoint(cx - halfBeak * 0.18, h)];
-        [beak curveToPoint:NSMakePoint(cx + halfBeak, bodyTop - 1.0)
-             controlPoint1:NSMakePoint(cx + halfBeak * 0.18, h)
-             controlPoint2:NSMakePoint(cx + halfBeak * 0.35, h - beakHeight * 0.15)];
-        [beak closePath];
-        [path appendBezierPath:beak];
-        [path setWindingRule:NSWindingRuleNonZero];
+    // NSVisualEffectView. It keeps the vibrancy and the window shadow correct.
+    NSBezierPath *shape = BezierFromPath(outline, h);
+    blur.maskImage = [NSImage imageWithSize:NSMakeSize(w, h)
+                                    flipped:NO
+                             drawingHandler:^BOOL(NSRect) {
         [[NSColor blackColor] set];
-        [path fill];
+        [shape fill];
         return YES;
     }];
-    blur.maskImage = mask;
-
     [nswin invalidateShadow];
+}
+
+bool AppKitBridge::hasLiquidGlass()
+{
+    if (@available(macOS 26.0, *)) return true;
+    return false;
+}
+
+void AppKitBridge::setGlassBackdrop(QWindow *qwin, const char *key,
+                                    const QRectF &rect, const Glass &g)
+{
+    NSWindow *nswin = NativeWindow(qwin);
+    if (!nswin || rect.isEmpty()) return;
+    NSView *qtView = nswin.contentView;
+    NSView *host = qtView.superview;
+    if (!qtView || !host) return; // no frame view to share: better no glass than no UI
+
+    NSString *identifier = [@"ifz.glass." stringByAppendingString:@(key)];
+    const NSRect frame = HostRect(host, qtView, rect);
+    NSView *existing = FindBackdrop(host, identifier);
+
+    if (@available(macOS 26.0, *)) {
+        NSGlassEffectView *glass = [existing isKindOfClass:[NSGlassEffectView class]]
+                                       ? (NSGlassEffectView *)existing : nil;
+        if (!glass) {
+            glass = [[NSGlassEffectView alloc] initWithFrame:frame];
+            glass.identifier = identifier;
+            // A sibling BELOW Qt's view: the glass refracts the desktop and Qt
+            // paints the controls on top of it.
+            [host addSubview:glass positioned:NSWindowBelow relativeTo:qtView];
+        }
+        glass.frame = frame;
+        glass.cornerRadius = g.cornerRadius;
+        glass.style = g.clear ? NSGlassEffectViewStyleClear : NSGlassEffectViewStyleRegular;
+        glass.tintColor = g.tint.isValid()
+            ? [NSColor colorWithSRGBRed:g.tint.redF() green:g.tint.greenF()
+                                   blue:g.tint.blueF() alpha:g.tint.alphaF()]
+            : nil;
+    } else {
+        NSVisualEffectView *blur = [existing isKindOfClass:[NSVisualEffectView class]]
+                                       ? (NSVisualEffectView *)existing : nil;
+        if (!blur) {
+            blur = [[NSVisualEffectView alloc] initWithFrame:frame];
+            blur.identifier = identifier;
+            blur.material = NSVisualEffectMaterialHUDWindow;
+            blur.blendingMode = NSVisualEffectBlendingModeBehindWindow;
+            blur.state = NSVisualEffectStateActive;
+            [host addSubview:blur positioned:NSWindowBelow relativeTo:qtView];
+        }
+        blur.frame = frame;
+        blur.maskImage = g.cornerRadius > 0 ? RoundedMask(g.cornerRadius) : nil;
+    }
+
+    nswin.opaque = NO;
+    nswin.backgroundColor = NSColor.clearColor;
+    [nswin invalidateShadow];
+}
+
+void AppKitBridge::useDarkAppearance(QWindow *qwin)
+{
+    NSWindow *nswin = NativeWindow(qwin);
+    if (!nswin) return;
+    nswin.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
 }
 
 void AppKitBridge::becomeAccessoryApp()

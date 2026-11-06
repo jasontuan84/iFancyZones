@@ -20,6 +20,53 @@ templates, Spaces awareness, layout import/export and auto-update.
 
 ---
 
+## [1.6.0] - 2026-11-06
+
+Liquid Glass on macOS 26 and later, an easier zone resize, and fixes for the
+snap width, the app switcher and the popover beak.
+
+### Added
+
+- **Liquid Glass.** On macOS 26 and later, `AppKitBridge::setGlassBackdrop`
+  puts an `NSGlassEffectView` behind the Qt content:
+  - The popover is a floating glass panel 6 pt below the menu bar, with no
+    beak, like the system's own menu-bar panels. Its 24 pt corner radius is
+    concentric with the cards inside it.
+  - The layout editor toolbar is a glass capsule with capsule buttons.
+  - The app switcher has a glass platter behind the cards.
+  - The popover's segmented control uses capsule shapes.
+
+  Glass surfaces always render in Dark Mode, because the app paints light
+  text. Older systems keep the vibrancy look.
+
+### Changed
+
+- **Zone resize is easier to grab.** The resize band ran 8 px in from the
+  widget edge, but the visible border sits `gap` px further in. With a gap of
+  8 px or more, the band was in the invisible gap and the border itself only
+  moved the zone. The band now covers the gap plus 12 px inside the border,
+  and corners catch 10 px further along each side. The edge under the cursor
+  shows a white bar before you press.
+
+### Fixed
+
+- **A snapped window keeps the width you designed.** The editor measured zones
+  against the whole screen, but a snap fills the available area, without the
+  menu bar and the Dock. With the Dock on the left or right, every snapped
+  window lost the Dock's width. The editor canvas is now the available area,
+  and the menu bar and Dock are shaded. Layouts saved earlier show in the
+  editor as they actually snap. Adjust and save them again where needed.
+- **The app switcher raises one window.** It activated the chosen app with
+  all its windows, so a Chrome window in another zone covered the app there.
+  It now raises only the app's frontmost window, the way zone cycling does.
+  An app with no window on the current space is unhidden and activated.
+- **The popover beak joins the panel without a seam** (before macOS 26). The
+  beak met the body at a corner, and the Qt tint and the AppKit blur mask
+  were two different paths up to 1 px apart. The outline is now one closed
+  contour with a smooth beak, and the blur mask is built from that same path.
+
+---
+
 ## [1.5.0] - 2026-09-28
 
 A configurable zone color, a new app icon, and fixes for zone cycling and

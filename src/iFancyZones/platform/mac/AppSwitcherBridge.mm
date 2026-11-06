@@ -1,6 +1,7 @@
 #include "AppSwitcherBridge.h"
 
 #import <AppKit/AppKit.h>
+#import <CoreGraphics/CoreGraphics.h>
 
 #include <unistd.h>
 
@@ -86,12 +87,57 @@ QList<RunningAppInfo> AppSwitcherBridge::runningApps(int iconPx)
     return out;
 }
 
+quint32 AppSwitcherBridge::frontmostWindowOf(qint64 pid)
+{
+    CFArrayRef list = CGWindowListCopyWindowInfo(
+        kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements,
+        kCGNullWindowID);
+    if (!list) return 0;
+
+    // CGWindowList is ordered front to back, so the first match is topmost.
+    quint32 found = 0;
+    const CFIndex n = CFArrayGetCount(list);
+    for (CFIndex i = 0; i < n && found == 0; ++i) {
+        CFDictionaryRef info = (CFDictionaryRef)CFArrayGetValueAtIndex(list, i);
+
+        int owner = 0;
+        if (auto ref = (CFNumberRef)CFDictionaryGetValue(info, kCGWindowOwnerPID))
+            CFNumberGetValue(ref, kCFNumberIntType, &owner);
+        if (owner != pid) continue;
+
+        int layer = 0;
+        if (auto ref = (CFNumberRef)CFDictionaryGetValue(info, kCGWindowLayer))
+            CFNumberGetValue(ref, kCFNumberIntType, &layer);
+        if (layer != 0) continue;
+
+        double alpha = 1.0;
+        if (auto ref = (CFNumberRef)CFDictionaryGetValue(info, kCGWindowAlpha))
+            CFNumberGetValue(ref, kCFNumberDoubleType, &alpha);
+        if (alpha <= 0.0) continue;
+
+        // Skip helper windows (tooltips, drag images) that are too small to
+        // be a real document window.
+        CGRect r = CGRectZero;
+        auto bounds = (CFDictionaryRef)CFDictionaryGetValue(info, kCGWindowBounds);
+        if (!bounds || !CGRectMakeWithDictionaryRepresentation(bounds, &r)) continue;
+        if (r.size.width < 50 || r.size.height < 50) continue;
+
+        int wid = 0;
+        if (auto ref = (CFNumberRef)CFDictionaryGetValue(info, kCGWindowNumber))
+            CFNumberGetValue(ref, kCFNumberIntType, &wid);
+        found = (quint32)wid;
+    }
+    CFRelease(list);
+    return found;
+}
+
 bool AppSwitcherBridge::activateApp(qint64 pid)
 {
     NSRunningApplication *app =
         [NSRunningApplication runningApplicationWithProcessIdentifier:(pid_t)pid];
     if (!app) return false;
-    return [app activateWithOptions:NSApplicationActivateAllWindows];
+    if (app.hidden) [app unhide];
+    return [app activateWithOptions:0];
 }
 
 } // namespace ifz

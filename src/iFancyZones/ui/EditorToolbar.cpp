@@ -1,5 +1,7 @@
 #include "EditorToolbar.h"
 
+#include "platform/mac/AppKitBridge.h"
+
 #include <QHBoxLayout>
 #include <QLineEdit>
 #include <QPainter>
@@ -12,19 +14,23 @@ EditorToolbar::EditorToolbar(QWidget *parent)
 {
     setAttribute(Qt::WA_TranslucentBackground);
     setFixedHeight(56);
+    m_glass = AppKitBridge::hasLiquidGlass();
 
+    // Capsule controls, concentric with the capsule toolbar: a 36 pt control
+    // inside a 10 pt margin has radius 18 = 28 - 10.
     auto *row = new QHBoxLayout(this);
-    row->setContentsMargins(16, 8, 16, 8);
+    row->setContentsMargins(10, 10, 10, 10);
     row->setSpacing(8);
 
     auto mkBtn = [this](const QString &text) {
         auto *b = new QPushButton(text, this);
-        b->setMinimumHeight(36);
+        b->setFixedHeight(36);
         b->setStyleSheet(
-            "QPushButton { background: rgba(50,50,50,220); color: white;"
-            " border-radius: 6px; padding: 4px 14px; font-weight: 500; }"
-            "QPushButton:hover { background: rgba(80,80,80,240); }"
-            "QPushButton:pressed { background: rgba(30,30,30,240); }"
+            "QPushButton { background: rgba(255,255,255,34); color: white;"
+            " border: 1px solid rgba(255,255,255,40);"
+            " border-radius: 18px; padding: 4px 16px; font-weight: 500; }"
+            "QPushButton:hover { background: rgba(255,255,255,58); }"
+            "QPushButton:pressed { background: rgba(255,255,255,20); }"
         );
         return b;
     };
@@ -37,9 +43,9 @@ EditorToolbar::EditorToolbar(QWidget *parent)
     m_nameEdit->setMinimumWidth(180);
     m_nameEdit->setPlaceholderText(tr("Layout name"));
     m_nameEdit->setStyleSheet(
-        "QLineEdit { background: rgba(20,20,20,160); color: white;"
-        " border: 1px solid rgba(255,255,255,60); border-radius: 6px;"
-        " padding: 4px 10px; font-weight: 500; min-height: 28px; }"
+        "QLineEdit { background: rgba(0,0,0,70); color: white;"
+        " border: 1px solid rgba(255,255,255,50); border-radius: 18px;"
+        " padding: 4px 14px; font-weight: 500; min-height: 26px; }"
         "QLineEdit:focus { border: 1px solid rgba(120,180,255,200); }"
     );
     connect(m_nameEdit, &QLineEdit::editingFinished, this, [this]() {
@@ -52,8 +58,8 @@ EditorToolbar::EditorToolbar(QWidget *parent)
     auto *bCancel = mkBtn(tr("Cancel"));
 
     bSave->setStyleSheet(bSave->styleSheet() +
-        "QPushButton { background: rgba(60,160,90,230); }"
-        "QPushButton:hover { background: rgba(80,180,110,240); }"
+        "QPushButton { background: rgba(60,160,90,210); border: 0; }"
+        "QPushButton:hover { background: rgba(80,180,110,235); }"
     );
 
     row->addWidget(bNew);
@@ -90,10 +96,13 @@ void EditorToolbar::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
-    QColor bg(30, 30, 30, 220);
-    p.setBrush(bg);
-    p.setPen(QPen(QColor(255, 255, 255, 60), 1));
-    p.drawRoundedRect(rect().adjusted(0, 0, -1, -1), 12, 12);
+    const QRectF r = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    const qreal rad = r.height() / 2;
+    // Over glass, only a light veil: it keeps the controls legible when a
+    // zone is dragged under the toolbar. Without glass, a solid dark capsule.
+    p.setBrush(m_glass ? QColor(16, 18, 26, 70) : QColor(30, 30, 30, 220));
+    p.setPen(m_glass ? Qt::NoPen : QPen(QColor(255, 255, 255, 60), 1));
+    p.drawRoundedRect(r, rad, rad);
 }
 
 } // namespace ifz

@@ -43,6 +43,10 @@ protected:
 
 private:
     void configureNative();
+    // The glass platter behind the cards, in widget coordinates. Empty when
+    // the system has no Liquid Glass.
+    QRectF platterRect() const;
+    qreal platterRadius() const;
     void drawCard(class QPainter &p, int i, qreal d, const QPointF &center);
 
     // Card sizing depends on the screen height (card height = 2/3 of it), so

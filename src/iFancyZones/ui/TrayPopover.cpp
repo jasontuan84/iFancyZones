@@ -27,12 +27,18 @@ namespace ifz {
 namespace {
 
 // Panel geometry. The beak sits above the body, so the widget is that much
-// taller than the content and every layout is inset by kBeakH at the top.
+// taller than the content and every layout is inset by the beak height.
 constexpr int kBeakH = 11;
-constexpr int kBeakW = 26;
+constexpr int kBeakW = 30;
 constexpr int kRadius = 12;
 constexpr int kBodyW = 348;
 constexpr int kBodyH = 548;
+
+// Liquid Glass panel: no beak, and a corner radius concentric with the cards
+// inside it (card radius + content margin).
+constexpr int kContentMargin = 14;
+constexpr int kGlassRadius = 10 + kContentMargin;
+constexpr int kGlassTopGap = 6;   // space between the menu bar and the panel
 
 // The status-item click that opens the popover keeps generating events for a
 // few moments afterwards (mouse-up, key-window shuffling). Ignore any
@@ -129,7 +135,8 @@ private:
 } // unnamed namespace
 
 TrayPopover::TrayPopover(SettingsStore *store, AccessibilityBridge *ax, QWidget *parent)
-    : QFrame(parent), m_store(store), m_ax(ax)
+    : QFrame(parent), m_store(store), m_ax(ax),
+      m_glass(AppKitBridge::hasLiquidGlass())
 {
     // NOT Qt::Popup: a Qt popup installs a mouse grab and dismisses itself on
     // the first click outside its rect. On macOS the status-item click that
@@ -142,12 +149,14 @@ TrayPopover::TrayPopover(SettingsStore *store, AccessibilityBridge *ax, QWidget 
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_MacAlwaysShowToolWindow);
     setAttribute(Qt::WA_DeleteOnClose, false);
-    setFixedSize(kBodyW, kBodyH + kBeakH);
+    const int beakH = int(beakHeight());
+    setFixedSize(kBodyW, kBodyH + beakH);
     setStyleSheet(theme::styleSheet());
     m_beakX = width() / 2.0;
 
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(14, 12 + kBeakH, 14, 8);
+    layout->setContentsMargins(kContentMargin, 12 + beakH, kContentMargin,
+                               m_glass ? 12 : 8);
     layout->setSpacing(10);
 
     // Header: app mark, name, and the running indicator.
@@ -255,13 +264,16 @@ void TrayPopover::showAtTray(const QRect &trayIconGeometry)
     int iconCenterX;
     if (!trayIconGeometry.isEmpty()) {
         iconCenterX = trayIconGeometry.center().x();
-        // Center under the tray icon; the beak covers the remaining gap.
-        targetTopLeft = QPoint(iconCenterX - width() / 2, trayIconGeometry.bottom() + 2);
+        // Center under the tray icon. The beak covers the gap to the menu
+        // bar. The glass panel floats a little below it instead.
+        targetTopLeft = QPoint(iconCenterX - width() / 2,
+                               trayIconGeometry.bottom() + (m_glass ? kGlassTopGap : 2));
     } else {
         // Qt can report an empty rect for the status item. Fall back to the
         // top-right of the menu bar, where menu-bar popovers belong, rather
         // than the middle of the screen.
-        targetTopLeft = QPoint(ag.right() - width() - 12, ag.top() + 2);
+        targetTopLeft = QPoint(ag.right() - width() - 12,
+                               ag.top() + (m_glass ? kGlassTopGap : 2));
         iconCenterX = targetTopLeft.x() + width() / 2;
     }
     // Clamp to screen bounds.
@@ -276,13 +288,23 @@ void TrayPopover::showAtTray(const QRect &trayIconGeometry)
     // Force the platform window so AppKit can be configured before it appears.
     winId();
     AppKitBridge::configureAsPopover(windowHandle());
+    AppKitBridge::useDarkAppearance(windowHandle());
 
     m_hiddenAt.invalidate();
     m_shownAt.start();
     show();
     raise();
-    // After show(), so the vibrancy view is sized from a laid-out window.
-    AppKitBridge::addPopoverBlur(windowHandle(), kRadius, kBeakH, kBeakW, beakCenterX());
+    // After show(), so the backdrop is sized from a laid-out window.
+    if (m_glass) {
+        AppKitBridge::Glass glass;
+        glass.cornerRadius = kGlassRadius;
+        // A light dark tint keeps the light text legible over a bright desktop.
+        glass.tint = QColor(16, 18, 26, 60);
+        AppKitBridge::setGlassBackdrop(windowHandle(), "panel", QRectF(rect()), glass);
+    } else {
+        // The same path the Qt side paints, so blur and edge cannot drift apart.
+        AppKitBridge::setShapedBlurBackdrop(windowHandle(), panelPath());
+    }
     update();
     // An accessory (LSUIElement) app is not frontmost, so activateWindow()
     // alone never makes the popover key, and a window that is never key can
@@ -292,6 +314,9 @@ void TrayPopover::showAtTray(const QRect &trayIconGeometry)
     setFocus(Qt::ActiveWindowFocusReason);
 }
 
+qreal TrayPopover::beakHeight() const { return m_glass ? 0 : kBeakH; }
+qreal TrayPopover::cornerRadius() const { return m_glass ? kGlassRadius : kRadius; }
+
 qreal TrayPopover::beakCenterX() const
 {
     // Keep the beak clear of the rounded corners.
@@ -300,26 +325,39 @@ qreal TrayPopover::beakCenterX() const
     return qBound(minX, m_beakX, maxX);
 }
 
-QPainterPath TrayPopover::panelPath() const
+QPainterPath TrayPopover::panelPath(qreal inset) const
 {
-    const QRectF body(0.5, kBeakH + 0.5, width() - 1.0, height() - kBeakH - 1.0);
+    const qreal bh = beakHeight();
+    const qreal r = cornerRadius();
+    const qreal d = 2 * r;
+    const QRectF body = QRectF(0, bh, width(), height() - bh)
+                            .adjusted(inset, inset, -inset, -inset);
+
+    // One contour, clockwise from the top-left corner. Building the beak into
+    // the outline (instead of uniting two shapes) gives the stroke no seam
+    // across the beak's base.
     QPainterPath path;
-    path.addRoundedRect(body, kRadius, kRadius);
-
-    const qreal cx = beakCenterX();
-    const qreal half = kBeakW / 2.0;
-    QPainterPath beak;
-    beak.moveTo(cx - half, body.top() + 1.0);
-    beak.cubicTo(cx - half * 0.35, kBeakH * 0.15 + 0.5,
-                 cx - half * 0.18, 0.5,
-                 cx, 0.5);
-    beak.cubicTo(cx + half * 0.18, 0.5,
-                 cx + half * 0.35, kBeakH * 0.15 + 0.5,
-                 cx + half, body.top() + 1.0);
-    beak.closeSubpath();
-
-    // One outline, so the border stroke does not cut across the beak's base.
-    return path.united(beak);
+    path.moveTo(body.left(), body.top() + r);
+    path.arcTo(QRectF(body.left(), body.top(), d, d), 180, -90);
+    if (bh > 0) {
+        const qreal cx = beakCenterX();
+        const qreal half = kBeakW / 2.0;
+        const qreal top = body.top();
+        const qreal tip = inset;
+        // Each half of the beak starts and ends with a horizontal tangent: it
+        // leaves the body edge with no corner and meets at a rounded tip.
+        path.lineTo(cx - half, top);
+        path.cubicTo(cx - half * 0.45, top, cx - half * 0.32, tip, cx, tip);
+        path.cubicTo(cx + half * 0.32, tip, cx + half * 0.45, top, cx + half, top);
+    }
+    path.lineTo(body.right() - r, body.top());
+    path.arcTo(QRectF(body.right() - d, body.top(), d, d), 90, -90);
+    path.lineTo(body.right(), body.bottom() - r);
+    path.arcTo(QRectF(body.right() - d, body.bottom() - d, d, d), 0, -90);
+    path.lineTo(body.left() + r, body.bottom());
+    path.arcTo(QRectF(body.left(), body.bottom() - d, d, d), 270, -90);
+    path.closeSubpath();
+    return path;
 }
 
 bool TrayPopover::event(QEvent *e)
@@ -343,15 +381,18 @@ void TrayPopover::keyPressEvent(QKeyEvent *e)
 
 void TrayPopover::paintEvent(QPaintEvent *)
 {
+    // The glass draws its own edge highlight and tint. Painting over it
+    // would flatten the refraction.
+    if (m_glass) return;
+
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
-    const QPainterPath path = panelPath();
-    // The NSVisualEffectView behind us supplies the blur; this is only a tint
+    // The NSVisualEffectView behind us supplies the blur. This is only a tint
     // to darken it, plus the hairline border that defines the panel's edge.
-    p.fillPath(path, QColor(22, 24, 32, 120));
+    p.fillPath(panelPath(), QColor(22, 24, 32, 120));
     p.setBrush(Qt::NoBrush);
     p.setPen(QPen(QColor(255, 255, 255, 48), 1));
-    p.drawPath(path);
+    p.drawPath(panelPath(0.5));
 }
 
 } // namespace ifz
