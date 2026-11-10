@@ -39,8 +39,11 @@ launch at login, Qt 6.12 and a stricter hardened runtime.
   `LSMinimumSystemVersion` and the README now say so.
 - **Builds against Qt 6.12.0.** `package-dmg.sh` and the README pointed at
   Qt 6.11.1. The script also drops a build cache made with another Qt.
-- **Hardened runtime without exceptions.** The JIT, unsigned-memory,
-  library-validation and Apple Events entitlements were not needed.
+- **Fewer hardened-runtime exceptions.** The JIT, unsigned-memory and Apple
+  Events entitlements were not needed and are gone.
+  `disable-library-validation` stays: with an ad-hoc signature (no Team ID)
+  library validation refuses the bundled Qt frameworks and dyld aborts at
+  launch.
 - Install notes describe **Open Anyway** in Privacy & Security, since the
   right-click Open shortcut stopped bypassing Gatekeeper in macOS 15.
 
