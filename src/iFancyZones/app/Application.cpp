@@ -4,6 +4,7 @@
 #include "app/TrayController.h"
 #include "platform/mac/AccessibilityBridge.h"
 #include "platform/mac/AppKitBridge.h"
+#include "platform/mac/LoginItem.h"
 #include "services/SettingsStore.h"
 #include "services/WindowManager.h"
 #include "ui/LayoutEditor.h"
@@ -47,6 +48,22 @@ void Application::bootstrap()
     theme::setZoneColor(m_settings->settings().zoneColor);
     connect(m_settings, &SettingsStore::settingsChanged, this, [this]() {
         theme::setZoneColor(m_settings->settings().zoneColor);
+    });
+
+    // Launch at login. The user can also flip it in System Settings > General >
+    // Login Items, so adopt the system state at startup, then push only real
+    // changes of the setting to SMAppService.
+    m_launchAtLogin = LoginItem::isEnabled();
+    if (m_settings->settings().launchAtLogin != m_launchAtLogin) {
+        AppSettings s = m_settings->settings();
+        s.launchAtLogin = m_launchAtLogin;
+        m_settings->setSettings(s);
+    }
+    connect(m_settings, &SettingsStore::settingsChanged, this, [this]() {
+        const bool want = m_settings->settings().launchAtLogin;
+        if (want == m_launchAtLogin) return;
+        LoginItem::setEnabled(want);
+        m_launchAtLogin = LoginItem::isEnabled();
     });
 
     m_accessibility = new AccessibilityBridge(this);

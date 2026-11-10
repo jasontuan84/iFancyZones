@@ -20,6 +20,40 @@ templates, Spaces awareness, layout import/export and auto-update.
 
 ---
 
+## [1.7.0] - 2026-11-10
+
+macOS 27 compatibility: a binary that runs on every supported macOS, working
+launch at login, Qt 6.12 and a stricter hardened runtime.
+
+### Added
+
+- **Launch at login works.** The setting was saved but never applied. It now
+  registers the app through `SMAppService` (`platform/mac/LoginItem`). The
+  system state is the source of truth: a change made in System Settings >
+  General > Login Items shows up in the app.
+
+### Changed
+
+- **Minimum macOS is now 14.4.** Qt 6.12 is built for macOS 14.4, so the app
+  never ran on anything older. `CMAKE_OSX_DEPLOYMENT_TARGET`,
+  `LSMinimumSystemVersion` and the README now say so.
+- **Builds against Qt 6.12.0.** `package-dmg.sh` and the README pointed at
+  Qt 6.11.1. The script also drops a build cache made with another Qt.
+- **Hardened runtime without exceptions.** The JIT, unsigned-memory,
+  library-validation and Apple Events entitlements were not needed.
+- Install notes describe **Open Anyway** in Privacy & Security, since the
+  right-click Open shortcut stopped bypassing Gatekeeper in macOS 15.
+
+### Fixed
+
+- **Binary targeted the build machine's macOS.** `CMAKE_OSX_DEPLOYMENT_TARGET`
+  was set after `project()` with a non-forcing `set(... CACHE)`, which never
+  overrides the empty entry `project()` creates. A build on macOS 27.2 refused
+  to launch on any older system. Existing build dirs are fixed on reconfigure.
+- `QImage::mirrored` replaced with `flipped(Qt::Vertical)`.
+
+---
+
 ## [1.6.0] - 2026-11-06
 
 Liquid Glass on macOS 26 and later, an easier zone resize, and fixes for the

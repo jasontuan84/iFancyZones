@@ -229,7 +229,7 @@ QPixmap CarouselOverlay::makeReflection(const QPixmap &card)
 {
     if (card.isNull()) return QPixmap();
     // Mirror vertically, then fade out downward via a destination-in gradient.
-    QImage img = card.toImage().mirrored(false, true);
+    QImage img = card.toImage().flipped(Qt::Vertical);
     QPainter p(&img);
     p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
     QLinearGradient g(0, 0, 0, img.height());

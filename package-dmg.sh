@@ -10,7 +10,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SRC="$HERE/src/iFancyZones"
-QT="${QT_PREFIX:-$HOME/Qt/6.11.1/macos}"
+QT="${QT_PREFIX:-$HOME/Qt/6.12.0/macos}"
 CM="${CMAKE:-$HOME/Qt/Tools/CMake/CMake.app/Contents/bin/cmake}"
 NINJA="${NINJA:-$HOME/Qt/Tools/Ninja/ninja}"
 MDQ="$QT/bin/macdeployqt"
@@ -23,6 +23,15 @@ ENTITLEMENTS="$SRC/packaging/entitlements.plist"
 VERSION="${VERSION:-$(sed -n 's/^[[:space:]]*VERSION \([0-9][0-9.]*\).*/\1/p' "$SRC/CMakeLists.txt" | head -1)}"
 VERSION="${VERSION:-1.0.0}"
 echo "==> iFancyZones $VERSION"
+
+[ -x "$MDQ" ] || { echo "ERROR: Qt not found at $QT (set QT_PREFIX)"; exit 1; }
+
+# A cache from another Qt install keeps pointing at it (Qt6_DIR), whatever
+# CMAKE_PREFIX_PATH says. Start clean when the Qt prefix changed.
+if [ -f "$BUILD/CMakeCache.txt" ] && ! grep -q "^Qt6_DIR:PATH=$QT/" "$BUILD/CMakeCache.txt"; then
+    echo "==> Qt prefix changed, removing stale $BUILD"
+    rm -rf "$BUILD"
+fi
 
 echo "==> Configure + build (Release)"
 "$CM" -S "$SRC" -B "$BUILD" -G Ninja \
@@ -65,8 +74,13 @@ iFancyZones — quản lý zone cửa sổ trên màn hình (giống FancyZones 
 
 Cài đặt: kéo  iFancyZones  thả vào thư mục  Applications.
 
-Lần đầu mở: nếu macOS báo "unidentified developer", chuột phải vào app
-→ Open → Open.
+Yêu cầu: macOS 14.4 trở lên.
+
+Lần đầu mở: app chưa được notarize nên macOS sẽ chặn. Từ macOS 15, cách
+chuột phải → Open không còn tác dụng. Hãy mở app một lần, bấm Done, rồi vào
+System Settings → Privacy & Security, kéo xuống và bấm "Open Anyway".
+Hoặc chạy trong Terminal:
+    xattr -dr com.apple.quarantine /Applications/iFancyZones.app
 
 Quyền cần cấp: System Settings → Privacy & Security → Accessibility →
 bật iFancyZones (để app có thể di chuyển / resize cửa sổ).

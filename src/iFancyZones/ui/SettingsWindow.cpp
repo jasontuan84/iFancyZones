@@ -2,6 +2,7 @@
 
 #include "ChordEdit.h"
 #include "HotkeyEdit.h"
+#include "platform/mac/LoginItem.h"
 #include "services/AppSettings.h"
 #include "services/SettingsStore.h"
 
@@ -177,7 +178,8 @@ void SettingsWindow::loadFromStore()
     m_hotkey->setHotkey(s.activationKeyCode, s.activationKeyLabel);
     m_cycleChord->setChord(s.cycleFocusKeyCode, s.cycleFocusModifiers, s.cycleFocusLabel);
     m_switcherChord->setChord(s.switcherKeyCode, s.switcherModifiers, s.switcherLabel);
-    m_launchAtLogin->setChecked(s.launchAtLogin);
+    // System Settings can change this behind our back, so ask the system.
+    m_launchAtLogin->setChecked(LoginItem::isEnabled());
     m_defaultGap->setValue(s.defaultGap);
     m_showNumbers->setChecked(s.showZoneNumbers);
     m_restoreSize->setChecked(s.restoreSizeOnUnsnap);

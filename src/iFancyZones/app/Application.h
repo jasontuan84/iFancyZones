@@ -46,6 +46,7 @@ private:
     QPointer<TrayPopover>    m_popover;
     QPointer<SettingsWindow> m_settingsWindow;
     QPointer<LayoutEditor>   m_editor;
+    bool                     m_launchAtLogin = false;  // last state pushed to SMAppService
 };
 
 } // namespace ifz

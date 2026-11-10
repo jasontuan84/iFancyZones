@@ -2,14 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
         "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-    <key>com.apple.security.cs.allow-jit</key>
-    <true/>
-    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
-    <true/>
-    <key>com.apple.security.cs.disable-library-validation</key>
-    <true/>
-    <key>com.apple.security.automation.apple-events</key>
-    <true/>
-</dict>
+<!--
+    Hardened runtime with no exceptions. The app needs no JIT, no unsigned
+    executable memory and no Apple Events. Everything it loads is bundled and
+    signed with the same identity, so library validation can stay on.
+    Accessibility and Login Items are TCC / SMAppService grants, not
+    entitlements.
+-->
+<dict/>
 </plist>

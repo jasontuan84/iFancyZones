@@ -1,7 +1,16 @@
 cmake_minimum_required(VERSION 3.21)
 
+# Must be set before project(): project() creates an empty cache entry, and a
+# plain set(... CACHE) never overrides an existing entry, so the binary would
+# silently target the build machine's SDK. FORCE an empty (stale) entry so old
+# build dirs pick it up too; an explicit -D value still wins.
+# Qt 6.12 itself is built for macOS 14.4 and later, so nothing older can run.
+if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "14.4" CACHE STRING "Minimum macOS" FORCE)
+endif()
+
 project(iFancyZones
-    VERSION 1.6.0
+    VERSION 1.7.0
     DESCRIPTION "Zone-based window manager for macOS"
     LANGUAGES CXX OBJCXX
 )
@@ -9,12 +18,11 @@ project(iFancyZones
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_OBJCXX_STANDARD 20)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS")
 if(NOT CMAKE_OSX_ARCHITECTURES)
     set(CMAKE_OSX_ARCHITECTURES "arm64" CACHE STRING "")
 endif()
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Widgets Svg)
+find_package(Qt6 6.12 REQUIRED COMPONENTS Core Gui Widgets Svg)
 qt_standard_project_setup()
 # qt_standard_project_setup() turns on AUTOMOC and AUTOUIC only. The .qrc in
 # the sources needs AUTORCC, or ":/icons/..." resources are never embedded.
@@ -71,6 +79,8 @@ set(IFZ_MAC_SOURCES
     platform/mac/AppSwitcherBridge.mm
     platform/mac/SwitcherInput.h
     platform/mac/SwitcherInput.mm
+    platform/mac/LoginItem.h
+    platform/mac/LoginItem.mm
 )
 
 qt_add_executable(iFancyZones
@@ -92,6 +102,7 @@ set(IFZ_MAC_MM_SOURCES
     platform/mac/HotkeyManager.mm
     platform/mac/AppSwitcherBridge.mm
     platform/mac/SwitcherInput.mm
+    platform/mac/LoginItem.mm
 )
 set_source_files_properties(${IFZ_MAC_MM_SOURCES} PROPERTIES
     LANGUAGE OBJCXX

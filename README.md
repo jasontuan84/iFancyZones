@@ -9,9 +9,9 @@ Draw your own layouts, then snap any window into place with a drag and a keypres
 
 Inspired by Microsoft PowerToys FancyZones, rebuilt natively for macOS with Qt 6 and Objective-C++.
 
-[![Version](https://img.shields.io/badge/version-1.6.0-2f81f7?style=flat-square)](#version--author)
-[![Platform](https://img.shields.io/badge/platform-macOS%2012%2B-000000?style=flat-square&logo=apple&logoColor=white)](#requirements)
-[![Qt](https://img.shields.io/badge/Qt-6.5%2B-41cd52?style=flat-square&logo=qt&logoColor=white)](#third-party-libraries)
+[![Version](https://img.shields.io/badge/version-1.7.0-2f81f7?style=flat-square)](#version--author)
+[![Platform](https://img.shields.io/badge/platform-macOS%2014.4%2B-000000?style=flat-square&logo=apple&logoColor=white)](#requirements)
+[![Qt](https://img.shields.io/badge/Qt-6.12%2B-41cd52?style=flat-square&logo=qt&logoColor=white)](#third-party-libraries)
 [![C++](https://img.shields.io/badge/C%2B%2B-20-00599c?style=flat-square&logo=cplusplus&logoColor=white)](#build-from-source)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
@@ -112,7 +112,7 @@ The editor takes over the display it belongs to. The floating toolbar carries `+
 
 | | |
 |---|---|
-| macOS | 12.0 Monterey or newer |
+| macOS | 14.4 Sonoma or newer (the minimum of Qt 6.12). Tested on macOS 27.2 |
 | Architecture | Apple Silicon (`arm64`); the project also builds `x86_64` |
 | Permission | Accessibility (required to move and resize other apps' windows) |
 
@@ -126,7 +126,7 @@ The app is **not** sandboxed and therefore not distributed through the Mac App S
 
 1. Download the latest `iFancyZones-<version>.dmg` from the Releases page.
 2. Open it and drag **iFancyZones** into `Applications`.
-3. Builds are ad-hoc signed and not notarized, so Gatekeeper will complain on first open. Right-click the app, choose **Open**, then **Open** again.
+3. Builds are ad-hoc signed and not notarized, so Gatekeeper blocks the first open. Since macOS 15 the right-click **Open** shortcut no longer works. Open the app once, click **Done**, then go to **System Settings -> Privacy & Security** and click **Open Anyway**. Alternatively run `xattr -dr com.apple.quarantine /Applications/iFancyZones.app`.
 4. Grant **System Settings -> Privacy & Security -> Accessibility -> iFancyZones**. The app detects the change within 2 seconds. No restart needed.
 
 ### Uninstall
@@ -230,7 +230,7 @@ Rules enforced across the tree:
 
 **Prerequisites**
 
-- Qt 6.5 or newer for macOS with the `Core`, `Gui`, `Widgets` and `Svg` modules (developed against 6.11.1)
+- Qt 6.12 or newer for macOS with the `Core`, `Gui`, `Widgets` and `Svg` modules (developed against 6.12.0). Qt 6.12 requires macOS 14.4, which sets the app's minimum.
 - CMake 3.21 or newer and Ninja (both ship with the Qt online installer)
 - Xcode command-line tools for the Clang toolchain and `codesign`
 
@@ -239,7 +239,7 @@ Rules enforced across the tree:
 ```bash
 cmake -S src/iFancyZones -B build -G Ninja \
       -DCMAKE_BUILD_TYPE=Debug \
-      -DCMAKE_PREFIX_PATH="$HOME/Qt/6.11.1/macos"
+      -DCMAKE_PREFIX_PATH="$HOME/Qt/6.12.0/macos"
 cmake --build build --target iFancyZones
 open build/iFancyZones.app
 ```
@@ -255,7 +255,7 @@ The script configures a Release build, runs `macdeployqt` to embed the Qt framew
 Override the defaults with environment variables:
 
 ```bash
-QT_PREFIX=/path/to/Qt/6.11.1/macos \
+QT_PREFIX=/path/to/Qt/6.12.0/macos \
 CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
 VERSION=1.4.1 \
 ./package-dmg.sh
@@ -273,17 +273,17 @@ No vendored dependencies, no package manager. The app links only Qt and the syst
 
 | Library / framework | Version | Licence | Used for |
 |---|---|---|---|
-| [Qt 6 Core](https://doc.qt.io/qt-6/qtcore-index.html) | 6.5+ | LGPLv3 / GPLv3 / Commercial | Object model, signals and slots, JSON, timers, `QUuid`, `QStandardPaths` |
-| [Qt 6 Gui](https://doc.qt.io/qt-6/qtgui-index.html) | 6.5+ | LGPLv3 / GPLv3 / Commercial | `QPainter` rendering, `QScreen`, icons, pixmaps, gradients |
-| [Qt 6 Widgets](https://doc.qt.io/qt-6/qtwidgets-index.html) | 6.5+ | LGPLv3 / GPLv3 / Commercial | The entire UI: popover, tabs, editor, settings, tray icon |
-| [Qt 6 Svg](https://doc.qt.io/qt-6/qtsvg-index.html) | 6.5+ | LGPLv3 / GPLv3 / Commercial | Vector icon rendering |
-| Apple **AppKit** | macOS 12+ SDK | Apple system framework | `NSWindow` levels, `NSScreen`, popover and overlay chrome, running applications |
-| Apple **ApplicationServices** | macOS 12+ SDK | Apple system framework | Accessibility API (`AXUIElement`), trust checks, window frames |
-| Apple **Carbon** | macOS 12+ SDK | Apple system framework | `RegisterEventHotKey` for global hotkeys |
-| Apple **CoreGraphics** | macOS 12+ SDK | Apple system framework | `CGEventTap` drag detection, `CGDisplay*` identity, window list |
-| Apple **QuartzCore** | macOS 12+ SDK | Apple system framework | Layer-backed overlay compositing |
-| Apple **Foundation** / **CoreFoundation** | macOS 12+ SDK | Apple system framework | Core Objective-C and CF types across the bridges |
-| Apple **ServiceManagement** | macOS 12+ SDK | Apple system framework | Launch-at-login registration |
+| [Qt 6 Core](https://doc.qt.io/qt-6/qtcore-index.html) | 6.12+ | LGPLv3 / GPLv3 / Commercial | Object model, signals and slots, JSON, timers, `QUuid`, `QStandardPaths` |
+| [Qt 6 Gui](https://doc.qt.io/qt-6/qtgui-index.html) | 6.12+ | LGPLv3 / GPLv3 / Commercial | `QPainter` rendering, `QScreen`, icons, pixmaps, gradients |
+| [Qt 6 Widgets](https://doc.qt.io/qt-6/qtwidgets-index.html) | 6.12+ | LGPLv3 / GPLv3 / Commercial | The entire UI: popover, tabs, editor, settings, tray icon |
+| [Qt 6 Svg](https://doc.qt.io/qt-6/qtsvg-index.html) | 6.12+ | LGPLv3 / GPLv3 / Commercial | Vector icon rendering |
+| Apple **AppKit** | macOS 14.4+ SDK | Apple system framework | `NSWindow` levels, `NSScreen`, popover and overlay chrome, running applications |
+| Apple **ApplicationServices** | macOS 14.4+ SDK | Apple system framework | Accessibility API (`AXUIElement`), trust checks, window frames |
+| Apple **Carbon** | macOS 14.4+ SDK | Apple system framework | `RegisterEventHotKey` for global hotkeys |
+| Apple **CoreGraphics** | macOS 14.4+ SDK | Apple system framework | `CGEventTap` drag detection, `CGDisplay*` identity, window list |
+| Apple **QuartzCore** | macOS 14.4+ SDK | Apple system framework | Layer-backed overlay compositing |
+| Apple **Foundation** / **CoreFoundation** | macOS 14.4+ SDK | Apple system framework | Core Objective-C and CF types across the bridges |
+| Apple **ServiceManagement** | macOS 14.4+ SDK | Apple system framework | `SMAppService` launch-at-login registration |
 
 Qt is dynamically linked and redistributed inside the app bundle under the terms of the **LGPLv3**.
 
@@ -329,10 +329,10 @@ Released under the [MIT License](LICENSE). Qt is used under the LGPLv3 and is re
 ## Version & author
 
 <table>
-<tr><td width="180"><strong>Current version</strong></td><td><code>1.6.0</code></td></tr>
+<tr><td width="180"><strong>Current version</strong></td><td><code>1.7.0</code></td></tr>
 <tr><td><strong>Bundle identifier</strong></td><td><code>com.tuanquynh.ifancyzones</code></td></tr>
 <tr><td><strong>Minimum macOS</strong></td><td>12.0 Monterey</td></tr>
-<tr><td><strong>Built with</strong></td><td>Qt 6.11.1 · C++20 / Objective-C++20 · CMake 3.21+ · Ninja</td></tr>
+<tr><td><strong>Built with</strong></td><td>Qt 6.12.0 · C++20 / Objective-C++20 · CMake 3.21+ · Ninja</td></tr>
 <tr><td><strong>Distribution</strong></td><td>Direct DMG, ad-hoc signed, not notarized</td></tr>
 <tr><td><strong>Author</strong></td><td>Jason Tuan · <a href="https://tuanquynh.com">tuanquynh.com</a></td></tr>
 <tr><td><strong>Copyright</strong></td><td>© 2026 Jason Tuan. All rights reserved.</td></tr>
