@@ -4,7 +4,10 @@
 #include <QScreen>
 
 #import <AppKit/AppKit.h>
+#import <ColorSync/ColorSync.h>
 #import <CoreGraphics/CoreGraphics.h>
+
+#include <algorithm>
 
 namespace ifz {
 
@@ -25,6 +28,27 @@ QRect CocoaFrameToQt(CGRect frame, CGFloat primaryHeight)
     int topY = (int)qRound(primaryHeight - (frame.origin.y + frame.size.height));
     return QRect((int)qRound(frame.origin.x), topY,
                  (int)qRound(frame.size.width), (int)qRound(frame.size.height));
+}
+
+// Persistent key of a display, see Monitor::key.
+QString DisplayKey(CGDirectDisplayID did)
+{
+    if (did == 0) return QString();
+    if (CFUUIDRef uuid = CGDisplayCreateUUIDFromDisplayID(did)) {
+        CFStringRef str = CFUUIDCreateString(kCFAllocatorDefault, uuid);
+        CFRelease(uuid);
+        if (str) {
+            const QString key = QString::fromCFString(str);
+            CFRelease(str);
+            if (!key.isEmpty()) return key;
+        }
+    }
+    // No ColorSync UUID (should not happen for a real display): fall back to
+    // the EDID identity, which still tells two monitors with serials apart.
+    return QStringLiteral("edid:%1-%2-%3")
+        .arg(CGDisplayVendorNumber(did))
+        .arg(CGDisplayModelNumber(did))
+        .arg(CGDisplaySerialNumber(did));
 }
 
 } // unnamed namespace
@@ -71,15 +95,14 @@ QList<Monitor> MacScreenInfo::currentMonitors()
     // Iterate NSScreen.screens directly: every physical display has its own
     // entry, regardless of whether two displays share a model name. This
     // bypasses any QScreen → NSScreen mapping problems.
-    int idx = 1;
     int i = -1;
     for (NSScreen *ns in NSScreen.screens) {
         ++i;
         CGDirectDisplayID did = DisplayIdForNSScreen(ns);
         const quint32 unit = did != 0 ? CGDisplayUnitNumber(did) : 0;
         NSLog(@"[iFancyZones]   NSScreen[%d]: name='%@' displayId=%u unitNumber=%u "
-              @"frame=(%.0f,%.0f,%.0fx%.0f) backingScale=%.1f",
-              i, ns.localizedName, did, unit,
+              @"key=%@ frame=(%.0f,%.0f,%.0fx%.0f) backingScale=%.1f",
+              i, ns.localizedName, did, unit, DisplayKey(did).toNSString(),
               ns.frame.origin.x, ns.frame.origin.y,
               ns.frame.size.width, ns.frame.size.height,
               ns.backingScaleFactor);
@@ -90,9 +113,9 @@ QList<Monitor> MacScreenInfo::currentMonitors()
         }
 
         Monitor m;
-        m.index = idx++;
         m.displayId = (quint32)did;
         m.unitNumber = unit;
+        m.key = DisplayKey(did);
         m.name = QString::fromNSString(ns.localizedName);
         m.geometry          = CocoaFrameToQt(ns.frame,        primaryHeight);
         m.availableGeometry = CocoaFrameToQt(ns.visibleFrame, primaryHeight);
@@ -101,48 +124,36 @@ QList<Monitor> MacScreenInfo::currentMonitors()
         m.physicalSizeMm = QSizeF(mm.width, mm.height);
         out.append(m);
     }
+
+    // NSScreen.screens lists the menu-bar display first and the rest in no
+    // useful order. Number the displays by where they sit instead.
+    std::stable_sort(out.begin(), out.end(), [](const Monitor &a, const Monitor &b) {
+        if (a.geometry.x() != b.geometry.x()) return a.geometry.x() < b.geometry.x();
+        return a.geometry.y() < b.geometry.y();
+    });
+    for (int k = 0; k < out.size(); ++k) out[k].index = k + 1;
+
     NSLog(@"[iFancyZones] MacScreenInfo: produced %d Monitor entries", (int)out.size());
     return out;
 }
 
-quint32 MacScreenInfo::unitNumberFor(const QScreen *screen)
+QString MacScreenInfo::displayKeyFor(const QScreen *screen)
 {
-    if (!screen) return 0;
+    if (!screen) return QString();
 
     NSScreen *primary = NSScreen.screens.firstObject;
-    if (!primary) return 0;
+    if (!primary) return QString();
     const CGFloat primaryHeight = primary.frame.size.height;
 
-    // Match by center-point containment: a screen's centre lies inside
-    // exactly one NSScreen's bounds (screens never overlap). Robust against
-    // sub-point geometry differences between Qt and Cocoa.
+    // Match by centre-point containment: a screen's centre lies inside
+    // exactly one NSScreen's bounds (screens never overlap). Never by name:
+    // two monitors of the same model share it.
     const QPoint qCenter = screen->geometry().center();
-
-    auto stableKeyFor = [](CGDirectDisplayID did) -> quint32 {
-        if (did == 0) return 0;
-        quint32 unit = CGDisplayUnitNumber(did);
-        if (unit != 0) return unit;
-        // Some main displays report unitNumber=0; fall back to displayId but
-        // namespace-separate it (high bit set) so we never collide with a
-        // real unit number on another monitor. Mirrors Monitor::stableKey().
-        return Monitor::kDisplayIdNamespaceBit | (quint32)did;
-    };
-
     for (NSScreen *ns in NSScreen.screens) {
         const QRect nsg = CocoaFrameToQt(ns.frame, primaryHeight);
-        if (nsg.contains(qCenter)) {
-            return stableKeyFor(DisplayIdForNSScreen(ns));
-        }
+        if (nsg.contains(qCenter)) return DisplayKey(DisplayIdForNSScreen(ns));
     }
-
-    // Last-resort fallback: name match.
-    NSString *qname = screen->name().toNSString();
-    for (NSScreen *ns in NSScreen.screens) {
-        if ([ns.localizedName isEqualToString:qname]) {
-            return stableKeyFor(DisplayIdForNSScreen(ns));
-        }
-    }
-    return 0;
+    return QString();
 }
 
 } // namespace ifz

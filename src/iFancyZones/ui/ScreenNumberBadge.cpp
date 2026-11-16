@@ -6,6 +6,7 @@
 #include <QFont>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QPropertyAnimation>
 #include <QTimer>
 #include <QWindow>
 
@@ -46,8 +47,20 @@ void ScreenNumberBadge::paintEvent(QPaintEvent *)
 
 // ─── ScreenIdentifierOverlay ────────────────────────────────────────────
 
+namespace {
+
+// Room around the disc for the soft shadow painted without glass.
+constexpr int kMargin = 12;
+
+} // unnamed namespace
+
 ScreenIdentifierOverlay::ScreenIdentifierOverlay(int number, const QRect &screenGeometry)
-    : QWidget(nullptr), m_number(number)
+    : QWidget(nullptr),
+      m_number(number),
+      // About a twelfth of the screen height: readable from the desk, but a
+      // badge rather than a poster. 120 pt on a 1440 pt tall display.
+      m_diameter(qBound(88, screenGeometry.height() / 12, 132)),
+      m_glass(AppKitBridge::hasLiquidGlass())
 {
     setWindowFlags(Qt::FramelessWindowHint
                  | Qt::WindowStaysOnTopHint
@@ -57,14 +70,46 @@ ScreenIdentifierOverlay::ScreenIdentifierOverlay(int number, const QRect &screen
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
     setAttribute(Qt::WA_DeleteOnClose);
-    setGeometry(screenGeometry);
+
+    const int side = m_diameter + 2 * kMargin;
+    QRect r(0, 0, side, side);
+    r.moveCenter(screenGeometry.center());
+    setGeometry(r);
+}
+
+QRectF ScreenIdentifierOverlay::discRect() const
+{
+    return QRectF(kMargin, kMargin, m_diameter, m_diameter);
 }
 
 void ScreenIdentifierOverlay::flash(int durationMs)
 {
+    setWindowOpacity(0.0);
     show();
     raise();
-    QTimer::singleShot(durationMs, this, &QWidget::close);
+    // Glass for the disc. Qt's view is above it and paints the number and a
+    // hairline rim, so the glass refracts the desktop, not a painted fill.
+    AppKitBridge::Glass glass;
+    glass.cornerRadius = m_diameter / 2.0;
+    glass.tint = theme::zoneColor(110);
+    AppKitBridge::setGlassBackdrop(windowHandle(), "disc", discRect(), glass);
+
+    fadeTo(1.0, 160);
+    const int fadeOut = 260;
+    QTimer::singleShot(qMax(0, durationMs - fadeOut), this, [this, fadeOut]() {
+        fadeTo(0.0, fadeOut);
+        QTimer::singleShot(fadeOut, this, &QWidget::close);
+    });
+}
+
+void ScreenIdentifierOverlay::fadeTo(qreal opacity, int ms)
+{
+    auto *anim = new QPropertyAnimation(this, "windowOpacity", this);
+    anim->setDuration(ms);
+    anim->setStartValue(windowOpacity());
+    anim->setEndValue(opacity);
+    anim->setEasingCurve(QEasingCurve::OutCubic);
+    anim->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 void ScreenIdentifierOverlay::showEvent(QShowEvent *e)
@@ -73,6 +118,7 @@ void ScreenIdentifierOverlay::showEvent(QShowEvent *e)
     if (!m_native) {
         if (QWindow *w = windowHandle()) {
             AppKitBridge::configureAsOverlay(w);
+            AppKitBridge::useDarkAppearance(w);
             m_native = true;
         }
     }
@@ -82,29 +128,38 @@ void ScreenIdentifierOverlay::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
+    p.setRenderHint(QPainter::TextAntialiasing);
 
-    // Large zone-colored circle in the centre of the screen.
-    const int diameter = qMin(width(), height()) / 3;
-    const QPoint c(width() / 2, height() / 2);
-    QRect circle(c.x() - diameter / 2, c.y() - diameter / 2, diameter, diameter);
+    const QRectF disc = discRect();
 
-    // Drop shadow effect by stacked semi-transparent ellipses.
-    for (int i = 16; i > 0; i -= 4) {
-        p.setBrush(QColor(0, 0, 0, 30));
+    if (!m_glass) {
+        // Before macOS 26 the backdrop is plain frosted vibrancy: add a soft
+        // shadow and the zone color so the disc reads the same way.
         p.setPen(Qt::NoPen);
-        p.drawEllipse(circle.adjusted(-i, -i, i, i));
+        for (int i = kMargin; i > 0; i -= 3) {
+            p.setBrush(QColor(0, 0, 0, 10));
+            p.drawEllipse(disc.adjusted(-i + 4, -i + 6, i - 4, i - 2));
+        }
+        p.setBrush(theme::zoneColor(150));
+        p.drawEllipse(disc);
     }
 
-    p.setBrush(theme::zoneColor(245));
-    p.setPen(QPen(QColor(255, 255, 255, 200), 6));
-    p.drawEllipse(circle);
+    // Hairline rim, the edge light of glass.
+    p.setBrush(Qt::NoBrush);
+    p.setPen(QPen(QColor(255, 255, 255, m_glass ? 90 : 140), 1.0));
+    p.drawEllipse(disc.adjusted(0.5, 0.5, -0.5, -0.5));
 
-    p.setPen(Qt::white);
     QFont f = p.font();
-    f.setBold(true);
-    f.setPointSize(diameter / 2);
+    f.setWeight(QFont::DemiBold);
+    f.setPixelSize(int(m_diameter * 0.46));
     p.setFont(f);
-    p.drawText(circle, Qt::AlignCenter, QString::number(m_number));
+    const QString text = QString::number(m_number);
+
+    // Soft shadow under the digit keeps it legible over bright desktops.
+    p.setPen(QColor(0, 0, 0, 70));
+    p.drawText(disc.translated(0, 1.5), Qt::AlignCenter, text);
+    p.setPen(Qt::white);
+    p.drawText(disc, Qt::AlignCenter, text);
 }
 
 } // namespace ifz

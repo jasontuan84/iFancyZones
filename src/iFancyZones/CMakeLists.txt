@@ -10,7 +10,7 @@ if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
 endif()
 
 project(iFancyZones
-    VERSION 1.7.0
+    VERSION 1.7.1
     DESCRIPTION "Zone-based window manager for macOS"
     LANGUAGES CXX OBJCXX
 )
@@ -125,6 +125,7 @@ target_link_libraries(iFancyZones PRIVATE
     "-framework AppKit"
     "-framework ApplicationServices"
     "-framework Carbon"
+    "-framework ColorSync"
     "-framework CoreGraphics"
     "-framework QuartzCore"
     "-framework CoreFoundation"

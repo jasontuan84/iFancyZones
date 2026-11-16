@@ -15,6 +15,7 @@
 #include <QLabel>
 #include <QPainter>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QScreen>
 #include <QScrollArea>
 #include <QUrl>
@@ -76,6 +77,17 @@ QString describeDisplay(const Monitor &m)
         parts << QObject::tr("ultrawide");
     }
     return parts.join(QStringLiteral(" · "));
+}
+
+// macOS tells identical monitors apart by appending " (1)", " (2)" to the
+// name, numbered in its own order. Next to our number badge that reads as a
+// contradiction ("1  DELL U2722D (2)"), so the badge alone carries the number.
+QString displayName(const Monitor &m)
+{
+    QString name = m.name;
+    static const QRegularExpression suffix(QStringLiteral("\\s*\\(\\d+\\)$"));
+    name.remove(suffix);
+    return name.isEmpty() ? QObject::tr("Display %1").arg(m.index) : name;
 }
 
 } // unnamed namespace
@@ -229,7 +241,7 @@ void ScreenLayoutTab::rebuildRows()
     for (const Monitor &m : monitors) {
         if (!m.isValid()) continue;
 
-        const quint32 key = m.stableKey();
+        const QString key = m.key;
         const QUuid currentId = m_store->bindingFor(key);
 
         auto *card = new Card(this);
@@ -248,9 +260,9 @@ void ScreenLayoutTab::rebuildRows()
 
         auto *titleRow = new QHBoxLayout();
         titleRow->setSpacing(8);
-        const QString displayName =
-            m.name.isEmpty() ? tr("Display %1").arg(m.index) : m.name;
-        auto *name = new QLabel(displayName, card);
+        // Same number "Detect" flashes on the display itself.
+        titleRow->addWidget(new ScreenNumberBadge(m.index, 18, card), 0, Qt::AlignVCenter);
+        auto *name = new QLabel(displayName(m), card);
         name->setStyleSheet(QStringLiteral("font-size: 14px; font-weight: 600;"));
         titleRow->addWidget(name, 0);
         if (m.isMain) titleRow->addWidget(new Tag(tr("Main"), card), 0, Qt::AlignVCenter);

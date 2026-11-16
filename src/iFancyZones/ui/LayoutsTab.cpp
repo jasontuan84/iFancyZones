@@ -169,7 +169,7 @@ QHash<QUuid, QString> LayoutsTab::boundDisplayNames() const
     const QList<Monitor> monitors = MacScreenInfo::currentMonitors();
     for (const Monitor &m : monitors) {
         if (!m.isValid()) continue;
-        const QUuid id = m_store->bindingFor(m.stableKey());
+        const QUuid id = m_store->bindingFor(m.key);
         if (id.isNull()) continue;
         const QString display =
             m.name.isEmpty() ? tr("Display %1").arg(m.index) : m.name;

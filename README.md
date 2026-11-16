@@ -9,7 +9,7 @@ Draw your own layouts, then snap any window into place with a drag and a keypres
 
 Inspired by Microsoft PowerToys FancyZones, rebuilt natively for macOS with Qt 6 and Objective-C++.
 
-[![Version](https://img.shields.io/badge/version-1.7.0-2f81f7?style=flat-square)](#version--author)
+[![Version](https://img.shields.io/badge/version-1.7.1-2f81f7?style=flat-square)](#version--author)
 [![Platform](https://img.shields.io/badge/platform-macOS%2014.4%2B-000000?style=flat-square&logo=apple&logoColor=white)](#requirements)
 [![Qt](https://img.shields.io/badge/Qt-6.12%2B-41cd52?style=flat-square&logo=qt&logoColor=white)](#third-party-libraries)
 [![C++](https://img.shields.io/badge/C%2B%2B-20-00599c?style=flat-square&logo=cplusplus&logoColor=white)](#build-from-source)
@@ -329,7 +329,7 @@ Released under the [MIT License](LICENSE). Qt is used under the LGPLv3 and is re
 ## Version & author
 
 <table>
-<tr><td width="180"><strong>Current version</strong></td><td><code>1.7.0</code></td></tr>
+<tr><td width="180"><strong>Current version</strong></td><td><code>1.7.1</code></td></tr>
 <tr><td><strong>Bundle identifier</strong></td><td><code>com.tuanquynh.ifancyzones</code></td></tr>
 <tr><td><strong>Minimum macOS</strong></td><td>12.0 Monterey</td></tr>
 <tr><td><strong>Built with</strong></td><td>Qt 6.12.0 · C++20 / Objective-C++20 · CMake 3.21+ · Ninja</td></tr>

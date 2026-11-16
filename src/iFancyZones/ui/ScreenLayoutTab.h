@@ -33,7 +33,7 @@ signals:
 
 private:
     struct Row {
-        quint32 unitNumber = 0;
+        QString key;
         QString name;
         QPointer<QComboBox> combo;
     };

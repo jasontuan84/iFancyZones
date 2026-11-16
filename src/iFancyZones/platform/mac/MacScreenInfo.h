@@ -8,14 +8,16 @@ class QScreen;
 
 namespace ifz {
 
-// Builds Monitor records (with stable CGDisplayUnitNumber) from Qt's QScreens.
+// Builds Monitor records for the connected displays.
 class MacScreenInfo {
 public:
+    // Ordered left to right (then top to bottom), numbered from 1 in that
+    // order, so "Detect" and the Displays tab match the physical arrangement.
     static QList<Monitor> currentMonitors();
 
-    // Best-effort: map a QScreen back to its CGDisplayUnitNumber.
-    // Returns 0 if not found.
-    static quint32 unitNumberFor(const QScreen *screen);
+    // The persistent Monitor::key of the display showing `screen`.
+    // Empty if not found.
+    static QString displayKeyFor(const QScreen *screen);
 };
 
 } // namespace ifz

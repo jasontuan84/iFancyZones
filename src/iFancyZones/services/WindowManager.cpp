@@ -195,11 +195,11 @@ void WindowManager::showOverlaysForDrag()
         ZoneOverlay *ov = it.value().data();
         if (!ov) continue;
 
-        quint32 unit = MacScreenInfo::unitNumberFor(s);
-        QUuid lid = m_store->bindingFor(unit);
+        const QString key = MacScreenInfo::displayKeyFor(s);
+        QUuid lid = m_store->bindingFor(key);
         if (lid.isNull()) {
             qDebug() << "[iFancyZones]   screen" << s->name()
-                     << "unit=" << unit << "no binding -> skip";
+                     << "key=" << key << "no binding -> skip";
             ov->hide();
             continue;
         }
@@ -429,8 +429,7 @@ void WindowManager::onCycleHotkey()
         qDebug() << "[iFancyZones]   focused window not on a known screen";
         return;
     }
-    const quint32 unit = MacScreenInfo::unitNumberFor(screen);
-    QUuid lid = m_store->bindingFor(unit);
+    QUuid lid = m_store->bindingFor(MacScreenInfo::displayKeyFor(screen));
     if (lid.isNull()) {
         qDebug() << "[iFancyZones]   screen has no layout bound";
         return;

@@ -2,6 +2,9 @@
 
 #include "AppSettings.h"
 #include "core/Layout.h"
+#include "core/Monitor.h"
+
+#include <QList>
 
 #include <QHash>
 #include <QObject>
@@ -30,10 +33,15 @@ public:
     void upsertLayout(const Layout &l);
     void deleteLayout(const QUuid &id);
 
-    // bindings: displayUnitNumber -> layoutId. layoutId.isNull() == "None".
-    QUuid bindingFor(quint32 displayUnitNumber) const;
-    void setBinding(quint32 displayUnitNumber, const QUuid &layoutId);
-    const QHash<quint32, QUuid> &allBindings() const { return m_bindings; }
+    // bindings: Monitor::key -> layoutId. layoutId.isNull() == "None".
+    QUuid bindingFor(const QString &displayKey) const;
+    void setBinding(const QString &displayKey, const QUuid &layoutId);
+
+    // Files from 1.7.0 and earlier keyed bindings by CGDisplayUnitNumber,
+    // which is not stable between sessions. Carry those over to the
+    // persistent key of the displays connected now, then drop them.
+    // Call once after load() with MacScreenInfo::currentMonitors().
+    void migrateLegacyBindings(const QList<Monitor> &monitors);
 
 signals:
     void layoutsChanged();
@@ -47,7 +55,8 @@ private:
 
     AppSettings m_settings;
     QVector<Layout> m_layouts;
-    QHash<quint32, QUuid> m_bindings;
+    QHash<QString, QUuid> m_bindings;
+    QHash<quint32, QUuid> m_legacyBindings; // read from an old file, see migrateLegacyBindings()
 
     bool m_loaded = false;
     bool m_savePending = false;

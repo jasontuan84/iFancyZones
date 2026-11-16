@@ -8,12 +8,22 @@
 
 namespace ifz {
 
-// Stable identity for a physical display. On macOS we use CGDisplayUnitNumber;
-// it survives reconnects of the same physical screen.
+// Identity of a physical display.
+//
+// `key` is what bindings persist under. It is the display's ColorSync UUID
+// (CGDisplayCreateUUIDFromDisplayID), which macOS itself uses to remember the
+// display arrangement. It is derived from the EDID vendor, model and serial
+// number, so two identical monitors still get different keys and keep them
+// across reboots, sleep and reconnects.
+//
+// CGDisplayUnitNumber and CGDirectDisplayID are NOT stable: with two monitors
+// of the same model they are handed out in enumeration order and can swap
+// between sessions, which used to swap the layouts of the two displays.
 struct Monitor {
-    int index = 0;                // 1-based, assigned by MacScreenInfo
-    quint32 displayId = 0;        // CGDirectDisplayID for live screens
-    quint32 unitNumber = 0;       // CGDisplayUnitNumber (stable per-physical-display when non-zero)
+    int index = 0;                // 1-based, left-to-right, assigned by MacScreenInfo
+    quint32 displayId = 0;        // CGDirectDisplayID for live screens (per session)
+    quint32 unitNumber = 0;       // CGDisplayUnitNumber (per session, only for migration)
+    QString key;                  // persistent per-physical-display key, see above
     QString name;                 // human-readable, e.g. "Built-in Retina Display"
     QRect geometry;               // in Qt's top-left coordinate system, points
     QRect availableGeometry;      // minus menu bar + Dock
@@ -39,15 +49,10 @@ struct Monitor {
     // assigned by Quartz means the display exists this session.
     bool isValid() const { return displayId != 0; }
 
-    // Stable per-physical-display key for persistence.
-    //
-    // CGDisplayUnitNumber is the preferred ID (it persists across reconnects).
-    // When it is 0 (happens for the main display on some macOS versions) we
-    // fall back to displayId — but we **set the high bit** so the fallback
-    // lives in a separate numeric namespace from real unit numbers. Otherwise
-    // displayId=1 would collide with unitNumber=1 of a different monitor.
+    // The key bindings were saved under up to 1.7.0. Used only to carry old
+    // bindings over to `key` for the displays connected at first launch.
     static constexpr quint32 kDisplayIdNamespaceBit = 0x80000000u;
-    quint32 stableKey() const {
+    quint32 legacyKey() const {
         if (unitNumber != 0) return unitNumber;
         if (displayId == 0) return 0;
         return kDisplayIdNamespaceBit | displayId;

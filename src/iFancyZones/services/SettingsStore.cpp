@@ -96,13 +96,22 @@ void SettingsStore::load()
     ensureBuiltIns();
 
     m_bindings.clear();
+    m_legacyBindings.clear();
     const QJsonArray bind = root.value("bindings").toArray();
     for (const QJsonValue &v : bind) {
         QJsonObject o = v.toObject();
-        quint32 unit = static_cast<quint32>(o.value("display-unit-number").toInt(0));
         QString sid = o.value("layout-id").toString();
         QUuid id = sid.isEmpty() ? QUuid() : QUuid::fromString(sid);
-        if (unit != 0) m_bindings.insert(unit, id);
+        if (id.isNull()) continue;
+        const QString key = o.value("display-key").toString();
+        if (!key.isEmpty()) {
+            m_bindings.insert(key, id);
+            continue;
+        }
+        // Old format: the key was a CGDisplayUnitNumber saved as an int
+        // (negative when the namespace bit was set).
+        const quint32 unit = static_cast<quint32>(o.value("display-unit-number").toInt(0));
+        if (unit != 0) m_legacyBindings.insert(unit, id);
     }
     m_loaded = true;
 }
@@ -124,7 +133,7 @@ void SettingsStore::ensureBuiltIns()
 void SettingsStore::save()
 {
     QJsonObject root;
-    root["schema-version"] = 1;
+    root["schema-version"] = 2;
     root["settings"] = m_settings.toJson();
 
     QJsonArray arr;
@@ -134,7 +143,7 @@ void SettingsStore::save()
     QJsonArray bind;
     for (auto it = m_bindings.constBegin(); it != m_bindings.constEnd(); ++it) {
         QJsonObject o;
-        o["display-unit-number"] = static_cast<int>(it.key());
+        o["display-key"] = it.key();
         o["layout-id"] = it.value().isNull() ? QString() : it.value().toString(QUuid::WithoutBraces);
         bind.append(o);
     }
@@ -204,18 +213,35 @@ void SettingsStore::deleteLayout(const QUuid &id)
     }
 }
 
-QUuid SettingsStore::bindingFor(quint32 displayUnitNumber) const
+QUuid SettingsStore::bindingFor(const QString &displayKey) const
 {
-    return m_bindings.value(displayUnitNumber, QUuid());
+    if (displayKey.isEmpty()) return QUuid();
+    return m_bindings.value(displayKey, QUuid());
 }
 
-void SettingsStore::setBinding(quint32 displayUnitNumber, const QUuid &layoutId)
+void SettingsStore::setBinding(const QString &displayKey, const QUuid &layoutId)
 {
+    if (displayKey.isEmpty()) return;
     if (layoutId.isNull()) {
-        m_bindings.remove(displayUnitNumber);
+        m_bindings.remove(displayKey);
     } else {
-        m_bindings.insert(displayUnitNumber, layoutId);
+        m_bindings.insert(displayKey, layoutId);
     }
+    emit bindingsChanged();
+    scheduleSave();
+}
+
+void SettingsStore::migrateLegacyBindings(const QList<Monitor> &monitors)
+{
+    if (m_legacyBindings.isEmpty()) return;
+    for (const Monitor &m : monitors) {
+        if (m.key.isEmpty() || m_bindings.contains(m.key)) continue;
+        const QUuid id = m_legacyBindings.value(m.legacyKey());
+        if (!id.isNull() && !layoutById(id).id().isNull()) m_bindings.insert(m.key, id);
+    }
+    // Unit numbers of displays not connected now mean nothing in a later
+    // session, so they are not kept.
+    m_legacyBindings.clear();
     emit bindingsChanged();
     scheduleSave();
 }

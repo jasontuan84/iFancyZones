@@ -24,15 +24,16 @@ private:
     int m_diameter = 26;
 };
 
-// Full-screen borderless overlay that paints a giant number in the centre
-// of a single screen. Used by the "Detect" button: one instance per screen,
-// auto-closes after a fixed duration.
+// Small borderless window centred on one screen: a Liquid Glass disc
+// (tinted with the zone color) with the screen's number on it. Before
+// macOS 26 the disc is a frosted vibrancy circle instead. Used by the
+// "Detect" button: one instance per screen, fades out after a fixed time.
 class ScreenIdentifierOverlay : public QWidget {
     Q_OBJECT
 public:
     explicit ScreenIdentifierOverlay(int number, const QRect &screenGeometry);
 
-    // Show, raise, and auto-close after `durationMs`.
+    // Fade in, then fade out and close after `durationMs`.
     void flash(int durationMs);
 
 protected:
@@ -40,8 +41,13 @@ protected:
     void showEvent(QShowEvent *e) override;
 
 private:
+    QRectF discRect() const;
+    void fadeTo(qreal opacity, int ms);
+
     int m_number;
+    int m_diameter;
     bool m_native = false;
+    bool m_glass = false;
 };
 
 } // namespace ifz

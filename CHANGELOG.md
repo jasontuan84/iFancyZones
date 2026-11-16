@@ -20,6 +20,41 @@ templates, Spaces awareness, layout import/export and auto-update.
 
 ---
 
+## [1.7.1] - 2026-11-16
+
+Two monitors of the same model no longer swap layouts, and Detect shows a
+small Liquid Glass badge instead of a poster-sized circle.
+
+### Changed
+
+- **Displays are numbered left to right** (then top to bottom), so the number
+  Detect flashes matches where the monitor sits on the desk. Before, the
+  menu-bar display was always 1.
+- **Each row in the Displays tab shows its number badge**, the same number
+  Detect flashes. The " (1)", " (2)" suffix macOS adds to identical monitors
+  is hidden: it is numbered in macOS's own order and contradicted the badge.
+- **Detect is a small Liquid Glass disc.** About a twelfth of the screen
+  height (120 pt on a 1440 pt display) instead of a third, an
+  `NSGlassEffectView` tinted with the zone color, a hairline rim, and a fade
+  in and out. Before macOS 26 it is a frosted vibrancy disc.
+
+### Fixed
+
+- **Identical monitors swapped layouts.** Bindings were keyed by
+  `CGDisplayUnitNumber`, which macOS hands out in enumeration order: with two
+  monitors of the same model it changes between reboots, sleep and
+  reconnects, so each display picked up the other's layout. Bindings are now
+  keyed by the display's ColorSync UUID (`CGDisplayCreateUUIDFromDisplayID`),
+  which macOS derives from the EDID vendor, model and serial number and uses
+  for its own display arrangement. The fallback that matched screens by name
+  is gone too: identical monitors share a name.
+- Bindings from 1.7.0 and earlier are carried over on first launch for the
+  displays connected at that moment. Leftover unit-number entries are
+  dropped. `data.json` moves to `schema-version` 2; going back to 1.7.0
+  loses the display bindings (layouts are kept).
+
+---
+
 ## [1.7.0] - 2026-11-10
 
 macOS 27 compatibility: a binary that runs on every supported macOS, working

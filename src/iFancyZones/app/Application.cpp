@@ -5,6 +5,7 @@
 #include "platform/mac/AccessibilityBridge.h"
 #include "platform/mac/AppKitBridge.h"
 #include "platform/mac/LoginItem.h"
+#include "platform/mac/MacScreenInfo.h"
 #include "services/SettingsStore.h"
 #include "services/WindowManager.h"
 #include "ui/LayoutEditor.h"
@@ -42,6 +43,7 @@ void Application::bootstrap()
 
     m_settings = new SettingsStore(this);
     m_settings->load();
+    m_settings->migrateLegacyBindings(MacScreenInfo::currentMonitors());
 
     // Every zone surface paints with theme::zoneColor(). Keep it in sync with
     // the user's setting.
