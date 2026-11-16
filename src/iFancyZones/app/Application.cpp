@@ -1,6 +1,5 @@
 #include "Application.h"
 
-#include "app/AppSwitcher.h"
 #include "app/TrayController.h"
 #include "platform/mac/AccessibilityBridge.h"
 #include "platform/mac/AppKitBridge.h"
@@ -29,8 +28,7 @@ Application::Application(int &argc, char **argv)
     setQuitOnLastWindowClosed(false);
 
     // App windows sit on a dark background, so make all QLabel text white for
-    // legibility. The carousel app name is painted directly (QPainter, black
-    // on a white card) and is unaffected by this widget stylesheet.
+    // legibility.
     setStyleSheet(QStringLiteral("QLabel { color: #FFFFFF; }"));
 }
 
@@ -79,10 +77,6 @@ void Application::bootstrap()
 
     m_windowMgr = new WindowManager(m_settings, m_accessibility, this);
     m_windowMgr->start();
-
-    // 3D app switcher (Alt+Space carousel). Independent of the zone manager.
-    m_switcher = new AppSwitcher(m_settings, m_accessibility, this);
-    m_switcher->start();
 
     m_tray = new TrayController(this);
     m_tray->install();

@@ -10,7 +10,7 @@ if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
 endif()
 
 project(iFancyZones
-    VERSION 1.7.1
+    VERSION 1.8.0
     DESCRIPTION "Zone-based window manager for macOS"
     LANGUAGES CXX OBJCXX
 )
@@ -44,7 +44,6 @@ set(IFZ_SERVICES_SOURCES
 set(IFZ_APP_SOURCES
     app/Application.h app/Application.cpp
     app/TrayController.h app/TrayController.cpp
-    app/AppSwitcher.h app/AppSwitcher.cpp
 )
 
 set(IFZ_UI_SOURCES
@@ -57,7 +56,6 @@ set(IFZ_UI_SOURCES
     ui/EditorToolbar.h ui/EditorToolbar.cpp
     ui/ZoneEditorWidget.h ui/ZoneEditorWidget.cpp
     ui/ZoneOverlay.h ui/ZoneOverlay.cpp
-    ui/CarouselOverlay.h ui/CarouselOverlay.cpp
     ui/SettingsWindow.h ui/SettingsWindow.cpp
     ui/HotkeyEdit.h ui/HotkeyEdit.cpp
     ui/ChordEdit.h ui/ChordEdit.cpp
@@ -75,10 +73,6 @@ set(IFZ_MAC_SOURCES
     platform/mac/MacScreenInfo.mm
     platform/mac/HotkeyManager.h
     platform/mac/HotkeyManager.mm
-    platform/mac/AppSwitcherBridge.h
-    platform/mac/AppSwitcherBridge.mm
-    platform/mac/SwitcherInput.h
-    platform/mac/SwitcherInput.mm
     platform/mac/LoginItem.h
     platform/mac/LoginItem.mm
 )
@@ -100,8 +94,6 @@ set(IFZ_MAC_MM_SOURCES
     platform/mac/AppKitBridge.mm
     platform/mac/MacScreenInfo.mm
     platform/mac/HotkeyManager.mm
-    platform/mac/AppSwitcherBridge.mm
-    platform/mac/SwitcherInput.mm
     platform/mac/LoginItem.mm
 )
 set_source_files_properties(${IFZ_MAC_MM_SOURCES} PROPERTIES

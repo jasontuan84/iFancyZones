@@ -40,9 +40,6 @@ SettingsWindow::SettingsWindow(SettingsStore *store, QWidget *parent)
     m_cycleChord = new ChordEdit(this);
     form->addRow(tr("Cycle window in zone:"), m_cycleChord);
 
-    m_switcherChord = new ChordEdit(this);
-    form->addRow(tr("App switcher (3D carousel):"), m_switcherChord);
-
     m_launchAtLogin = new QCheckBox(tr("Launch at login"), this);
     form->addRow(QString(), m_launchAtLogin);
 
@@ -177,7 +174,6 @@ void SettingsWindow::loadFromStore()
     const AppSettings &s = m_store->settings();
     m_hotkey->setHotkey(s.activationKeyCode, s.activationKeyLabel);
     m_cycleChord->setChord(s.cycleFocusKeyCode, s.cycleFocusModifiers, s.cycleFocusLabel);
-    m_switcherChord->setChord(s.switcherKeyCode, s.switcherModifiers, s.switcherLabel);
     // System Settings can change this behind our back, so ask the system.
     m_launchAtLogin->setChecked(LoginItem::isEnabled());
     m_defaultGap->setValue(s.defaultGap);
@@ -207,9 +203,6 @@ void SettingsWindow::onSave()
     s.cycleFocusKeyCode = m_cycleChord->keyCode();
     s.cycleFocusModifiers = m_cycleChord->modifiers();
     s.cycleFocusLabel = m_cycleChord->label();
-    s.switcherKeyCode = m_switcherChord->keyCode();
-    s.switcherModifiers = m_switcherChord->modifiers();
-    s.switcherLabel = m_switcherChord->label();
     s.launchAtLogin = m_launchAtLogin->isChecked();
     s.defaultGap = m_defaultGap->value();
     s.showZoneNumbers = m_showNumbers->isChecked();

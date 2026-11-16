@@ -261,7 +261,7 @@ void ScreenLayoutTab::rebuildRows()
         auto *titleRow = new QHBoxLayout();
         titleRow->setSpacing(8);
         // Same number "Detect" flashes on the display itself.
-        titleRow->addWidget(new ScreenNumberBadge(m.index, 18, card), 0, Qt::AlignVCenter);
+        titleRow->addWidget(new ScreenNumberBadge(m.index, 22, card), 0, Qt::AlignVCenter);
         auto *name = new QLabel(displayName(m), card);
         name->setStyleSheet(QStringLiteral("font-size: 14px; font-weight: 600;"));
         titleRow->addWidget(name, 0);

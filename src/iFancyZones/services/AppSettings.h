@@ -20,14 +20,6 @@ struct AppSettings {
     int cycleFocusModifiers = 1 << 11;      // optionKey
     QString cycleFocusLabel = QStringLiteral("Opt+Tab");
 
-    // 3D app-switcher carousel. Hold the modifier, tap the base key to open;
-    // arrow keys move the selection; releasing the modifier raises the picked
-    // app. Defaults to Option+Space (optionKey | kVK_Space=49).
-    bool switcherEnabled = true;
-    int switcherKeyCode = 49;               // kVK_Space
-    int switcherModifiers = 1 << 11;        // optionKey
-    QString switcherLabel = QStringLiteral("Opt+Space");
-
     bool launchAtLogin = false;
     int defaultGap = 0;
     bool showZoneNumbers = true;

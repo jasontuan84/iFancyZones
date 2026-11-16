@@ -9,7 +9,6 @@ namespace ifz {
 
 class SettingsStore;
 class WindowManager;
-class AppSwitcher;
 class TrayController;
 class TrayPopover;
 class SettingsWindow;
@@ -41,7 +40,6 @@ private:
     SettingsStore       *m_settings = nullptr;
     AccessibilityBridge *m_accessibility = nullptr;
     WindowManager       *m_windowMgr = nullptr;
-    AppSwitcher         *m_switcher = nullptr;
     TrayController      *m_tray = nullptr;
     QPointer<TrayPopover>    m_popover;
     QPointer<SettingsWindow> m_settingsWindow;

@@ -32,7 +32,6 @@ private:
     SettingsStore *m_store;
     HotkeyEdit  *m_hotkey = nullptr;
     ChordEdit   *m_cycleChord = nullptr;
-    ChordEdit   *m_switcherChord = nullptr;
     QCheckBox   *m_launchAtLogin = nullptr;
     QSpinBox    *m_defaultGap = nullptr;
     QCheckBox   *m_showNumbers = nullptr;

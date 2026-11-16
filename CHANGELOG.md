@@ -20,6 +20,27 @@ templates, Spaces awareness, layout import/export and auto-update.
 
 ---
 
+## [1.8.0] - 2026-11-16
+
+The 3D app switcher is gone, and the Displays tab makes its number chips
+easier to match with Detect.
+
+### Changed
+
+- **Larger number chip in the Displays tab.** The zone-colored chip before
+  each display's name, the same number Detect flashes on that screen, is
+  22 pt instead of 18 pt so the row-to-screen mapping is easy to spot.
+
+### Removed
+
+- **3D app switcher (carousel).** `app/AppSwitcher`, `ui/CarouselOverlay`,
+  `platform/mac/AppSwitcherBridge` and `platform/mac/SwitcherInput` are gone,
+  with the `Opt+Space` hotkey, its row in Settings and the `switcher-*` keys
+  in `data.json` (dropped on the next save). The cycle-in-zone hotkey keeps
+  `HotkeyManager` and `ChordEdit`.
+
+---
+
 ## [1.7.1] - 2026-11-16
 
 Two monitors of the same model no longer swap layouts, and Detect shows a
